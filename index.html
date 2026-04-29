@@ -5431,7 +5431,39 @@ const google = {
       document.getElementById('visitSearchResults').innerHTML = '';
       document.getElementById('visit_name').value = '';
       document.getElementById('visit_phone').value = '';
+      document.getElementById('visit_type').value = 'Gym'; // reset to default
+      updateVisitPrice();
       document.getElementById('visitModal').style.display = 'flex';
+    }
+
+    function updateVisitPrice() {
+      const type = document.getElementById('visit_type').value;
+      const priceSpan = document.getElementById('visitPriceSpan');
+      const totalSpan = document.getElementById('visitTotalSpan');
+      priceSpan.innerHTML = '<span class="spinner"></span>';
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          let price = 25000;
+          if (res && res.success && res.packages) {
+            const vName = type.toLowerCase().startsWith('visit') ? type : 'visit ' + type;
+            const pkg = res.packages.find(p => p.name.toLowerCase() === vName.toLowerCase());
+            if (pkg) price = pkg.price || pkg.total || 25000;
+            else {
+              const fallbacks = {'Gym': 25000, 'Calistenics Privat': 100000, 'Calistenics Group': 50000, 'Yoga': 35000, 'Zumba': 35000};
+              price = fallbacks[type] || 25000;
+            }
+          }
+          priceSpan.textContent = formatCurrency(price);
+          totalSpan.textContent = formatCurrency(price);
+        })
+        .withFailureHandler(function(err) {
+          const fallbacks = {'Gym': 25000, 'Calistenics Privat': 100000, 'Calistenics Group': 50000, 'Yoga': 35000, 'Zumba': 35000};
+          const price = fallbacks[type] || 25000;
+          priceSpan.textContent = formatCurrency(price);
+          totalSpan.textContent = formatCurrency(price);
+        })
+        .getPackages();
     }
 
     function searchVisitorForVisit(query) {
