@@ -1070,6 +1070,9 @@ const google = {
         <div class="menu-item" data-view="expenses" onclick="showView('expenses')">
           <i class="fas fa-file-invoice-dollar"></i><span>Pengeluaran Toko</span>
         </div>
+                <div class="menu-item" data-view="birthdays" onclick="showView('birthdays')">
+          <i class="fas fa-birthday-cake"></i><span>Ulang Tahun Member</span>
+        </div>
         <div class="menu-item" data-view="analytics" onclick="showView('analytics')">
           <i class="fas fa-chart-pie"></i><span>Laporan Analitik</span>
         </div>
@@ -1390,7 +1393,163 @@ const google = {
               <p>Terima Kasih</p>
               <p>UGYM MANAGEMENT</p>
             </div>
-          </body>
+          
+    // ================ BIRTHDAYS VIEW ================
+    function loadBirthdaysView() {
+      const container = document.getElementById('contentArea');
+      container.innerHTML = `
+        <div class="view-header">
+          <h2 class="view-title">Ulang Tahun Member</h2>
+          <button class="btn btn-primary" onclick="refreshBirthdays()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+          </button>
+        </div>
+        
+        <div class="row">
+          <!-- List Kolom Kiri -->
+          <div class="col-12 col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Daftar Ulang Tahun (1 Bulan Kedepan)</h3>
+              </div>
+              <div class="card-body">
+                <div id="birthdaysListContainer" style="min-height:300px; max-height: 600px; overflow-y: auto;">
+                  <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Editor Template Kolom Kanan -->
+          <div class="col-12 col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Pesan WhatsApp (Template)</h3>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5">
+                  Gunakan parameter berikut dalam pesan:<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{name}</code> : Nama Member<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{age}</code> : Usia yang dirayakan
+                </p>
+                <textarea id="bdayTemplateInput" class="form-input" style="height:200px;resize:vertical;font-size:14px" placeholder="Ketik pesan ulang tahun..."></textarea>
+                <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="saveBdayTemplate()" id="btnSaveTemplate">
+                  <i class="fas fa-save"></i> Simpan Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      refreshBirthdays();
+    }
+    
+    let currentBdayTemplate = "";
+    
+    function refreshBirthdays() {
+      const container = document.getElementById('birthdaysListContainer');
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            container.innerHTML = `<div class="alert alert-error">Gagal memuat: ${res ? res.message : 'Error tidak diketahui'}</div>`;
+            return;
+          }
+          
+          // Set template
+          currentBdayTemplate = res.template;
+          const templateInput = document.getElementById('bdayTemplateInput');
+          if (templateInput) templateInput.value = res.template;
+          
+          if (!res.birthdays || res.birthdays.length === 0) {
+            container.innerHTML = `
+              <div style="text-align:center;padding:40px 20px">
+                <div style="font-size:40px;color:#cbd5e1;margin-bottom:16px"><i class="fas fa-birthday-cake"></i></div>
+                <h3 style="color:#64748b;margin:0 0 8px">Tidak ada Ulang Tahun</h3>
+                <p style="color:#94a3b8;font-size:14px;margin:0">Tidak ada member aktif yang berulang tahun dalam 1 bulan ke depan.</p>
+              </div>
+            `;
+            return;
+          }
+          
+          let html = `<div class="list-container">`;
+          const todayStr = new Date().toDateString();
+          
+          res.birthdays.forEach(b => {
+            const isToday = new Date(b.nextBirthday).toDateString() === todayStr;
+            const bdayDate = new Date(b.nextBirthday).toLocaleDateString('id-ID', {day:'numeric', month:'long'});
+            
+            html += `
+              <div class="list-item" style="${isToday ? 'border-left: 4px solid #d4af37; background: #fffcf0;' : ''}">
+                <div class="list-item-content">
+                  <div class="list-item-title">${escapeHtml(b.name)}</div>
+                  <div class="list-item-subtitle" style="margin-top:4px">
+                    <span class="badge ${isToday ? 'badge-primary' : 'badge-info'}" style="margin-right:8px">
+                      <i class="fas fa-birthday-cake"></i> ${isToday ? 'HARI INI!' : bdayDate}
+                    </span>
+                    <i class="fas fa-calendar-alt"></i> Ke-${b.age} • <i class="fas fa-phone"></i> ${b.phone}
+                  </div>
+                </div>
+                <div class="list-item-action">
+                  <button class="btn ${isToday ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="sendBdayWA('${b.name}', ${b.age}, '${b.phone}')">
+                    <i class="fab fa-whatsapp"></i> ${isToday ? 'Kirim Ucapan' : 'Pesan'}
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+          container.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          container.innerHTML = `<div class="alert alert-error">Koneksi gagal: ${err.message}</div>`;
+        })
+        .getUpcomingBirthdays();
+    }
+    
+    function sendBdayWA(name, age, phone) {
+      if (!currentBdayTemplate) {
+        showToast('Template belum dimuat', 'warning');
+        return;
+      }
+      
+      let message = currentBdayTemplate
+        .replace(/{name}/gi, name)
+        .replace(/{age}/gi, age);
+        
+      shareToWhatsApp(phone, message);
+    }
+    
+    function saveBdayTemplate() {
+      const template = document.getElementById('bdayTemplateInput').value;
+      const btn = document.getElementById('btnSaveTemplate');
+      const originalText = btn.innerHTML;
+      
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          if (res && res.success) {
+            currentBdayTemplate = template;
+            showToast('Template ucapan berhasil disimpan!', 'success');
+          } else {
+            showToast('Gagal: ' + (res ? res.message : ''), 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          showToast('Error: ' + err.message, 'error');
+        })
+        .saveBirthdayTemplate(template);
+    }
+
+</body>
         </html>
       `);
     */
@@ -1643,7 +1802,8 @@ const google = {
         pos: 'Point of Sale',
         catalog: 'Katalog & Inventori',
         expenses: 'Pengeluaran Toko',
-        analytics: 'Laporan Analitik & Grafik'
+        analytics: 'Laporan Analitik & Grafik',
+        birthdays: 'Ulang Tahun Member'
       };
       
       document.getElementById('pageTitle').textContent = titles[view] || view;
@@ -1663,6 +1823,7 @@ const google = {
         case 'catalog':      loadCatalogView();   break;
         case 'expenses':     loadExpensesView();  break;
         case 'analytics':    loadAnalyticsView(); break;
+        case 'birthdays':    loadBirthdaysView(); break;
         case 'gallery':      loadGalleryView();   break;
       }
     }
@@ -2872,7 +3033,163 @@ const google = {
                     </div>
                     <div class="footer-tag">VIP MEMBER</div>
                   </div>
-                </body>
+                
+    // ================ BIRTHDAYS VIEW ================
+    function loadBirthdaysView() {
+      const container = document.getElementById('contentArea');
+      container.innerHTML = `
+        <div class="view-header">
+          <h2 class="view-title">Ulang Tahun Member</h2>
+          <button class="btn btn-primary" onclick="refreshBirthdays()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+          </button>
+        </div>
+        
+        <div class="row">
+          <!-- List Kolom Kiri -->
+          <div class="col-12 col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Daftar Ulang Tahun (1 Bulan Kedepan)</h3>
+              </div>
+              <div class="card-body">
+                <div id="birthdaysListContainer" style="min-height:300px; max-height: 600px; overflow-y: auto;">
+                  <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Editor Template Kolom Kanan -->
+          <div class="col-12 col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Pesan WhatsApp (Template)</h3>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5">
+                  Gunakan parameter berikut dalam pesan:<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{name}</code> : Nama Member<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{age}</code> : Usia yang dirayakan
+                </p>
+                <textarea id="bdayTemplateInput" class="form-input" style="height:200px;resize:vertical;font-size:14px" placeholder="Ketik pesan ulang tahun..."></textarea>
+                <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="saveBdayTemplate()" id="btnSaveTemplate">
+                  <i class="fas fa-save"></i> Simpan Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      refreshBirthdays();
+    }
+    
+    let currentBdayTemplate = "";
+    
+    function refreshBirthdays() {
+      const container = document.getElementById('birthdaysListContainer');
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            container.innerHTML = `<div class="alert alert-error">Gagal memuat: ${res ? res.message : 'Error tidak diketahui'}</div>`;
+            return;
+          }
+          
+          // Set template
+          currentBdayTemplate = res.template;
+          const templateInput = document.getElementById('bdayTemplateInput');
+          if (templateInput) templateInput.value = res.template;
+          
+          if (!res.birthdays || res.birthdays.length === 0) {
+            container.innerHTML = `
+              <div style="text-align:center;padding:40px 20px">
+                <div style="font-size:40px;color:#cbd5e1;margin-bottom:16px"><i class="fas fa-birthday-cake"></i></div>
+                <h3 style="color:#64748b;margin:0 0 8px">Tidak ada Ulang Tahun</h3>
+                <p style="color:#94a3b8;font-size:14px;margin:0">Tidak ada member aktif yang berulang tahun dalam 1 bulan ke depan.</p>
+              </div>
+            `;
+            return;
+          }
+          
+          let html = `<div class="list-container">`;
+          const todayStr = new Date().toDateString();
+          
+          res.birthdays.forEach(b => {
+            const isToday = new Date(b.nextBirthday).toDateString() === todayStr;
+            const bdayDate = new Date(b.nextBirthday).toLocaleDateString('id-ID', {day:'numeric', month:'long'});
+            
+            html += `
+              <div class="list-item" style="${isToday ? 'border-left: 4px solid #d4af37; background: #fffcf0;' : ''}">
+                <div class="list-item-content">
+                  <div class="list-item-title">${escapeHtml(b.name)}</div>
+                  <div class="list-item-subtitle" style="margin-top:4px">
+                    <span class="badge ${isToday ? 'badge-primary' : 'badge-info'}" style="margin-right:8px">
+                      <i class="fas fa-birthday-cake"></i> ${isToday ? 'HARI INI!' : bdayDate}
+                    </span>
+                    <i class="fas fa-calendar-alt"></i> Ke-${b.age} • <i class="fas fa-phone"></i> ${b.phone}
+                  </div>
+                </div>
+                <div class="list-item-action">
+                  <button class="btn ${isToday ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="sendBdayWA('${b.name}', ${b.age}, '${b.phone}')">
+                    <i class="fab fa-whatsapp"></i> ${isToday ? 'Kirim Ucapan' : 'Pesan'}
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+          container.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          container.innerHTML = `<div class="alert alert-error">Koneksi gagal: ${err.message}</div>`;
+        })
+        .getUpcomingBirthdays();
+    }
+    
+    function sendBdayWA(name, age, phone) {
+      if (!currentBdayTemplate) {
+        showToast('Template belum dimuat', 'warning');
+        return;
+      }
+      
+      let message = currentBdayTemplate
+        .replace(/{name}/gi, name)
+        .replace(/{age}/gi, age);
+        
+      shareToWhatsApp(phone, message);
+    }
+    
+    function saveBdayTemplate() {
+      const template = document.getElementById('bdayTemplateInput').value;
+      const btn = document.getElementById('btnSaveTemplate');
+      const originalText = btn.innerHTML;
+      
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          if (res && res.success) {
+            currentBdayTemplate = template;
+            showToast('Template ucapan berhasil disimpan!', 'success');
+          } else {
+            showToast('Gagal: ' + (res ? res.message : ''), 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          showToast('Error: ' + err.message, 'error');
+        })
+        .saveBirthdayTemplate(template);
+    }
+
+</body>
               </html>
             `);
             printWindow.document.close();
@@ -8247,5 +8564,161 @@ const google = {
        // We'll update the render part there.
     }
   </script>
+
+    // ================ BIRTHDAYS VIEW ================
+    function loadBirthdaysView() {
+      const container = document.getElementById('contentArea');
+      container.innerHTML = `
+        <div class="view-header">
+          <h2 class="view-title">Ulang Tahun Member</h2>
+          <button class="btn btn-primary" onclick="refreshBirthdays()">
+            <i class="fas fa-sync-alt"></i> Refresh Data
+          </button>
+        </div>
+        
+        <div class="row">
+          <!-- List Kolom Kiri -->
+          <div class="col-12 col-md-8">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Daftar Ulang Tahun (1 Bulan Kedepan)</h3>
+              </div>
+              <div class="card-body">
+                <div id="birthdaysListContainer" style="min-height:300px; max-height: 600px; overflow-y: auto;">
+                  <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Editor Template Kolom Kanan -->
+          <div class="col-12 col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Pesan WhatsApp (Template)</h3>
+              </div>
+              <div class="card-body">
+                <p style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5">
+                  Gunakan parameter berikut dalam pesan:<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{name}</code> : Nama Member<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{age}</code> : Usia yang dirayakan
+                </p>
+                <textarea id="bdayTemplateInput" class="form-input" style="height:200px;resize:vertical;font-size:14px" placeholder="Ketik pesan ulang tahun..."></textarea>
+                <button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="saveBdayTemplate()" id="btnSaveTemplate">
+                  <i class="fas fa-save"></i> Simpan Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      refreshBirthdays();
+    }
+    
+    let currentBdayTemplate = "";
+    
+    function refreshBirthdays() {
+      const container = document.getElementById('birthdaysListContainer');
+      container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (!res || !res.success) {
+            container.innerHTML = `<div class="alert alert-error">Gagal memuat: ${res ? res.message : 'Error tidak diketahui'}</div>`;
+            return;
+          }
+          
+          // Set template
+          currentBdayTemplate = res.template;
+          const templateInput = document.getElementById('bdayTemplateInput');
+          if (templateInput) templateInput.value = res.template;
+          
+          if (!res.birthdays || res.birthdays.length === 0) {
+            container.innerHTML = `
+              <div style="text-align:center;padding:40px 20px">
+                <div style="font-size:40px;color:#cbd5e1;margin-bottom:16px"><i class="fas fa-birthday-cake"></i></div>
+                <h3 style="color:#64748b;margin:0 0 8px">Tidak ada Ulang Tahun</h3>
+                <p style="color:#94a3b8;font-size:14px;margin:0">Tidak ada member aktif yang berulang tahun dalam 1 bulan ke depan.</p>
+              </div>
+            `;
+            return;
+          }
+          
+          let html = `<div class="list-container">`;
+          const todayStr = new Date().toDateString();
+          
+          res.birthdays.forEach(b => {
+            const isToday = new Date(b.nextBirthday).toDateString() === todayStr;
+            const bdayDate = new Date(b.nextBirthday).toLocaleDateString('id-ID', {day:'numeric', month:'long'});
+            
+            html += `
+              <div class="list-item" style="${isToday ? 'border-left: 4px solid #d4af37; background: #fffcf0;' : ''}">
+                <div class="list-item-content">
+                  <div class="list-item-title">${escapeHtml(b.name)}</div>
+                  <div class="list-item-subtitle" style="margin-top:4px">
+                    <span class="badge ${isToday ? 'badge-primary' : 'badge-info'}" style="margin-right:8px">
+                      <i class="fas fa-birthday-cake"></i> ${isToday ? 'HARI INI!' : bdayDate}
+                    </span>
+                    <i class="fas fa-calendar-alt"></i> Ke-${b.age} • <i class="fas fa-phone"></i> ${b.phone}
+                  </div>
+                </div>
+                <div class="list-item-action">
+                  <button class="btn ${isToday ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="sendBdayWA('${b.name}', ${b.age}, '${b.phone}')">
+                    <i class="fab fa-whatsapp"></i> ${isToday ? 'Kirim Ucapan' : 'Pesan'}
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+          html += `</div>`;
+          container.innerHTML = html;
+        })
+        .withFailureHandler(function(err) {
+          container.innerHTML = `<div class="alert alert-error">Koneksi gagal: ${err.message}</div>`;
+        })
+        .getUpcomingBirthdays();
+    }
+    
+    function sendBdayWA(name, age, phone) {
+      if (!currentBdayTemplate) {
+        showToast('Template belum dimuat', 'warning');
+        return;
+      }
+      
+      let message = currentBdayTemplate
+        .replace(/{name}/gi, name)
+        .replace(/{age}/gi, age);
+        
+      shareToWhatsApp(phone, message);
+    }
+    
+    function saveBdayTemplate() {
+      const template = document.getElementById('bdayTemplateInput').value;
+      const btn = document.getElementById('btnSaveTemplate');
+      const originalText = btn.innerHTML;
+      
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          if (res && res.success) {
+            currentBdayTemplate = template;
+            showToast('Template ucapan berhasil disimpan!', 'success');
+          } else {
+            showToast('Gagal: ' + (res ? res.message : ''), 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          showToast('Error: ' + err.message, 'error');
+        })
+        .saveBirthdayTemplate(template);
+    }
+
 </body>
 </html>
