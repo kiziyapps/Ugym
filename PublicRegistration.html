@@ -865,9 +865,9 @@
                 <span>Harga Paket</span>
                 <span id="summaryPackagePrice">Rp 0</span>
               </div>
-              <div class="payment-row" style="display:none">
+              <div class="payment-row" style="display:flex">
                 <span>Biaya Registrasi</span>
-                <span>Rp 0</span>
+                <span>Rp 50.000</span>
               </div>
               <div class="payment-row payment-total">
                 <span>TOTAL</span>
@@ -1159,7 +1159,7 @@
       document.getElementById('summaryPackage').textContent = selectedPackage.name;
       document.getElementById('summaryPackagePrice').textContent = formatCurrency(selectedPackage.price);
       
-      const total = selectedPackage.price + 0;
+      const total = selectedPackage.price + 50000;
       document.getElementById('summaryTotal').textContent = formatCurrency(total);
 
       // Show payment section
@@ -1288,7 +1288,7 @@
         return; 
       }
 
-      const totalAmount = selectedPackage.price + 0;
+      const totalAmount = selectedPackage.price + 50000;
 
       const btn = document.getElementById('btnSubmit');
       btn.innerHTML = '<span class="spinner"></span> Mengirim...'; 
@@ -1324,6 +1324,7 @@
               `Paket           : ${selectedPackage.name}\n` +
               `Metode Bayar    : ${paymentMethod}\n` +
               `Harga Paket     : ${formatCurrency(selectedPackage.price)}\n` +
+              `Biaya Registrasi: Rp 50.000\n` +
               `TOTAL           : ${formatCurrency(totalAmount)}\n\n` +
               `⏳ Admin akan memverifikasi dalam 1×24 jam.\n` +
               `📧 Cek email ${formData.email} untuk konfirmasi.`,
