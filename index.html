@@ -953,15 +953,25 @@ const google = {
             <label class="form-label">Nomor HP *</label>
             <input id="visit_phone" class="form-input" placeholder="Contoh: 081234567890">
           </div>
+          <div class="form-group">
+            <label class="form-label">Tipe Visit *</label>
+            <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
+              <option value="Gym" selected>Gym</option>
+              <option value="Calistenics Privat">Calistenics Privat</option>
+              <option value="Calistenics Group">Calistenics Group</option>
+              <option value="Yoga">Yoga</option>
+              <option value="Zumba">Zumba</option>
+            </select>
+          </div>
         </div>
         <div class="payment-info" style="margin-top:0">
           <div class="payment-row">
             <span>Biaya Visit</span>
-            <span>Rp 25.000</span>
+            <span id="visitPriceSpan">Rp 25.000</span>
           </div>
           <div class="payment-row payment-total">
             <span>Total</span>
-            <span>Rp 25.000</span>
+            <span id="visitTotalSpan">Rp 25.000</span>
           </div>
         </div>
       </div>
@@ -2224,9 +2234,9 @@ const google = {
                     <span>Harga Paket</span>
                     <span id="paymentPackagePrice">Rp 0</span>
                   </div>
-                  <div class="payment-row" id="regFeeRow" style="display:none">
+                  <div class="payment-row" id="regFeeRow" style="display:flex">
                     <span>Biaya Registrasi</span>
-                    <span>${formatCurrency(0)}</span>
+                    <span>Rp 50.000</span>
                   </div>
                   <div class="payment-row payment-total">
                     <span>Total</span>
@@ -2324,7 +2334,7 @@ const google = {
       const totalEl = document.getElementById('paymentTotal');
       
       if (selectedPkg) {
-        const total = selectedPkg.price + 0;
+        const total = selectedPkg.price + 50000;
         packagePriceEl.textContent = formatCurrency(selectedPkg.price);
         packagePriceEl.style.color = '#667eea';
         totalEl.textContent = formatCurrency(total);
@@ -2526,7 +2536,7 @@ const google = {
         return; 
       }
       
-      const totalAmount = pkg.price + 0;
+      const totalAmount = pkg.price + 50000;
       
       showConfirm(
         `KONFIRMASI REGISTRASI MEMBER\n\n` +
@@ -2536,7 +2546,7 @@ const google = {
         `Paket       : ${pkg.name}\n` +
         `Durasi      : ${pkg.duration}\n` +
         `Harga Paket : ${formatCurrency(pkg.price)}\n` +
-        (0 > 0 ? `Biaya Reg   : ${formatCurrency(0)}\n` : '') +
+        `Biaya Reg   : Rp 50.000\n` +
         `Total       : ${formatCurrency(totalAmount)}\n` +
         `Metode      : ${pay}\n\n` +
         `Lanjutkan registrasi member?`, 
@@ -5516,7 +5526,7 @@ const google = {
                 </div>
                 <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
                   <p><b>${escapeHtml(name)}</b> (${escapeHtml(phone)})</p>
-                  <p style="margin-top:4px;font-size:13px;color:#64748b">Visit Harian - Rp 25.000</p>
+                  <p style="margin-top:4px;font-size:13px;color:#64748b">Visit ${res.visitType || 'Harian'} - ${formatCurrency(res.amount || 25000)}</p>
                 </div>
               </div>
             `;
@@ -5536,7 +5546,8 @@ const google = {
           btn.disabled = false;
           showToast('Error: ' + err.message, 'error');
         })
-        .processVisitCheckIn({ visitorName: name, visitorPhone: phone, paymentMethod: 'Cash' });
+        const vType = document.getElementById('visit_type').value;
+        google.script.run... // to be replaced later
     }
     
     // ================ QR SCANNER ================
