@@ -3078,6 +3078,22 @@
             <div class="stat-value" id="statAktif">0</div>
             <div class="stat-label">Sesuai Masa Aktif</div>
           </div>
+          <div class="stat-card stat-card-clickable" id="cardGallery" style="border-top-color:#f472b6" onclick="showView('gallery')">
+            <div class="stat-header">
+              <span class="stat-label">Galeri Member</span>
+              <div class="stat-icon" style="background:#fdf2f8; color:#db2777"><i class="fas fa-images"></i></div>
+            </div>
+            <div class="stat-value" id="statGallery">0</div>
+            <div class="stat-label">Member Berfoto</div>
+          </div>
+          <div class="stat-card stat-card-clickable" id="cardBirthday" style="border-top-color:#fbbf24" onclick="showView('birthdays')">
+            <div class="stat-header">
+              <span class="stat-label">Ulang Tahun</span>
+              <div class="stat-icon" style="background:#fffbeb; color:#d97706"><i class="fas fa-birthday-cake"></i></div>
+            </div>
+            <div class="stat-value" id="statBirthday">0</div>
+            <div class="stat-label">Hari Ini</div>
+          </div>
           <div class="stat-card stat-card-clickable" style="border-top-color:#3b82f6" onclick="showDashboardDetail('checkins')">
             <div class="stat-header">
               <span class="stat-label">Check-In Hari Ini</span>
@@ -3260,6 +3276,8 @@
             // Fitness Stats
             if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = s.total || 0;
             if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
+            if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
+            if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
             if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
             if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
             if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = s.checkins || 0;
@@ -8664,15 +8682,22 @@
         let visible = true;
 
         if (role === 'Staff' || role === 'Kasir') {
-          const staffViews = ['dashboard', 'members', 'transactions', 'checkin', 'pt', 'pos', 'approvals', 'expenses'];
+          const staffViews = ['dashboard', 'members', 'transactions', 'checkin', 'pt', 'pos', 'approvals', 'expenses', 'birthdays', 'gallery'];
           if (!staffViews.includes(view)) visible = false;
 
-          // Hide specific dashboard cards
+          // Dashboard card visibility for Kasir
           if (view === 'dashboard') {
+            // Previously hidden cards are now shown for Kasir as requested
             const cardTotal = document.getElementById('cardTotalMember');
             const cardAktif = document.getElementById('cardMemberAktif');
-            if (cardTotal) cardTotal.style.display = 'none';
-            if (cardAktif) cardAktif.style.display = 'none';
+            if (cardTotal) cardTotal.style.display = 'flex';
+            if (cardAktif) cardAktif.style.display = 'flex';
+            
+            // New Gallery and Birthday cards are also visible
+            const cardGallery = document.getElementById('cardGallery');
+            const cardBirthday = document.getElementById('cardBirthday');
+            if (cardGallery) cardGallery.style.display = 'flex';
+            if (cardBirthday) cardBirthday.style.display = 'flex';
           }
         } else if (role === 'Admin') {
           // Hide pending approvals for Admin as requested
