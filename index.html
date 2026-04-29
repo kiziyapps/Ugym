@@ -5546,8 +5546,7 @@ const google = {
           btn.disabled = false;
           showToast('Error: ' + err.message, 'error');
         })
-        const vType = document.getElementById('visit_type').value;
-        google.script.run... // to be replaced later
+        .processVisitCheckIn({ visitorName: name, visitorPhone: phone, visitType: document.getElementById('visit_type').value, paymentMethod: 'Cash' });
     }
     
     // ================ QR SCANNER ================
