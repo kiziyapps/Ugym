@@ -1193,7 +1193,7 @@
             return;
           }
           
-          packages = res.packages;
+          packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
           
           container.innerHTML = `
             <div class="packages-grid">
