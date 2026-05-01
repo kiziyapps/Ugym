@@ -395,7 +395,7 @@
       
       <!-- Developer Branding -->
       <div class="developer-branding" style="text-align: center; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 36px; height: 36px; margin-bottom: 4px; object-fit: contain;">
+        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo" style="width: 36px; height: 36px; margin-bottom: 4px; object-fit: contain;">
         <div style="font-weight: bold; color: #1e293b; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;">KIZIY</div>
         <div style="font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 11px; color: #64748b; margin-top: 2px;">key to easy</div>
       </div>
@@ -424,7 +424,7 @@
       google.script.run
         .withSuccessHandler(function(res) {
           if (res && res.success) {
-            packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
+            packages = res.packages;
           }
         })
         .getPackages();
