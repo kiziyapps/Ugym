@@ -424,7 +424,7 @@
       google.script.run
         .withSuccessHandler(function(res) {
           if (res && res.success) {
-            packages = res.packages;
+            packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
             if (currentMember) renderPackages();
           }
         })
