@@ -2385,7 +2385,7 @@
       <div id="authCard" class="auth-card">Memuat Form Login...</div>
       <!-- Developer Branding -->
       <div class="developer-branding" style="text-align: center; cursor: pointer; opacity: 0.9; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.9'; this.style.transform='scale(1)'">
-        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 80px; height: auto; margin-bottom: 6px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo" style="width: 80px; height: auto; margin-bottom: 6px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
         <div style="font-weight: 800; color: #1e293b; font-size: 16px; letter-spacing: 2px; text-align: center; text-transform: uppercase;">KIZIY</div>
         <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 11px; color: #64748b; margin-top: 2px; text-align: center; letter-spacing: 1px;">key to easy</div>
       </div>
@@ -2499,7 +2499,7 @@
       
       <!-- Developer Branding -->
       <div class="developer-branding" style="text-align: center; padding: 30px 0; margin-top: 40px; border-top: 1px solid var(--border-color); cursor: pointer; opacity: 0.8; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">
-        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 100px; height: auto; margin-bottom: 8px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo" style="width: 100px; height: auto; margin-bottom: 8px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
         <div style="font-weight: 800; color: var(--text-main); font-size: 18px; letter-spacing: 3px; text-align: center; text-transform: uppercase;">KIZIY</div>
         <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-align: center; letter-spacing: 1.5px;">key to easy</div>
       </div>
@@ -3652,7 +3652,7 @@
                 <div class="form-group">
                   <label class="form-label">Pilih Paket *</label>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
-                    ${pkgs.length ? pkgs.filter(p => p.type && p.type.toLowerCase().includes('regular')).map(p => `
+                    ${pkgs.length ? pkgs.map(p => `
                       <div class="pkg-card" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-dur="${p.duration}" onclick="selectPkg(this)">
                         <div style="font-weight:600;margin-bottom:6px">${escapeHtml(p.name)}</div>
                         <div style="color:#667eea;font-weight:700">${formatCurrency(p.price)}</div>
@@ -4359,7 +4359,7 @@
                     <label class="form-label">Pilih Paket *</label>
                     <select id="trx_package" class="form-input">
                       <option value="">-- Pilih Paket --</option>
-                      ${pkgs.filter(p => p.type && p.type.toLowerCase().includes('regular')).map(p =>
+                      ${pkgs.map(p =>
             `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" data-duration="${p.duration}">${escapeHtml(p.name)} - ${formatCurrency(p.price)} (${escapeHtml(p.duration)})</option>`
           ).join('')}
                     </select>
