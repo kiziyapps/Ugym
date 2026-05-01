@@ -3652,7 +3652,7 @@
                 <div class="form-group">
                   <label class="form-label">Pilih Paket *</label>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
-                    ${pkgs.length ? pkgs.map(p => `
+                    ${pkgs.length ? pkgs.filter(p => p.type && p.type.toLowerCase().includes('regular')).map(p => `
                       <div class="pkg-card" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-dur="${p.duration}" onclick="selectPkg(this)">
                         <div style="font-weight:600;margin-bottom:6px">${escapeHtml(p.name)}</div>
                         <div style="color:#667eea;font-weight:700">${formatCurrency(p.price)}</div>
@@ -4359,7 +4359,7 @@
                     <label class="form-label">Pilih Paket *</label>
                     <select id="trx_package" class="form-input">
                       <option value="">-- Pilih Paket --</option>
-                      ${pkgs.map(p =>
+                      ${pkgs.filter(p => p.type && p.type.toLowerCase().includes('regular')).map(p =>
             `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" data-duration="${p.duration}">${escapeHtml(p.name)} - ${formatCurrency(p.price)} (${escapeHtml(p.duration)})</option>`
           ).join('')}
                     </select>
