@@ -535,6 +535,13 @@
       margin-bottom: 20px;
     }
 
+    @media (max-width: 640px) {
+      .form-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+    }
+
     .form-input {
       width: 100%;
       padding: 14px 16px;
@@ -797,12 +804,20 @@
       color: var(--primary);
     }
 
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 1rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
     .data-table {
       width: 100%;
       border-collapse: collapse;
-      display: block;
-      overflow-x: auto;
-      white-space: nowrap;
+      background-color: transparent;
+      min-width: 800px; /* Ensure table doesn't squash columns */
     }
 
     .data-table th {
@@ -814,6 +829,7 @@
       color: var(--text-secondary);
       text-transform: uppercase;
       border-bottom: 0.5px solid var(--border-color);
+      white-space: nowrap;
     }
 
     .data-table td {
@@ -821,6 +837,12 @@
       border-bottom: 0.5px solid var(--border-color);
       font-size: 14px;
       color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    .data-table td b {
+      display: block;
+      min-width: 150px; /* Min width for names */
     }
 
     .data-table tr:hover td {
@@ -2362,10 +2384,10 @@
     <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
       <div id="authCard" class="auth-card">Memuat Form Login...</div>
       <!-- Developer Branding -->
-      <div class="developer-branding" style="text-align: center; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'">
-        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 32px; height: 32px; margin-bottom: 4px; object-fit: contain; display: block;">
-        <div style="font-weight: bold; color: #475569; font-size: 12px; letter-spacing: 1px; text-align: center;">KIZIY</div>
-        <div style="font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 10px; color: #64748b; margin-top: 1px; text-align: center;">key to easy</div>
+      <div class="developer-branding" style="text-align: center; cursor: pointer; opacity: 0.9; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.9'; this.style.transform='scale(1)'">
+        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 80px; height: auto; margin-bottom: 6px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+        <div style="font-weight: 800; color: #1e293b; font-size: 16px; letter-spacing: 2px; text-align: center; text-transform: uppercase;">KIZIY</div>
+        <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 11px; color: #64748b; margin-top: 2px; text-align: center; letter-spacing: 1px;">key to easy</div>
       </div>
     </div>
   </div>
@@ -2476,10 +2498,10 @@
       <div id="contentArea"></div>
       
       <!-- Developer Branding -->
-      <div class="developer-branding" style="text-align: center; padding: 30px 0; margin-top: 20px; border-top: 1px solid var(--border-color); cursor: pointer; opacity: 0.7; transition: opacity 0.2s; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">
-        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 36px; height: 36px; margin-bottom: 4px; object-fit: contain; display: block;">
-        <div style="font-weight: bold; color: var(--text-main); font-size: 13px; letter-spacing: 1px; text-align: center;">KIZIY</div>
-        <div style="font-family: 'Comic Sans MS', 'Comic Sans', cursive; font-size: 11px; color: var(--text-secondary); margin-top: 2px; text-align: center;">key to easy</div>
+      <div class="developer-branding" style="text-align: center; padding: 30px 0; margin-top: 40px; border-top: 1px solid var(--border-color); cursor: pointer; opacity: 0.8; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">
+        <img src="https://i.imgur.com/uFGDJ3a.png" alt="KIZIY Logo" style="width: 100px; height: auto; margin-bottom: 8px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+        <div style="font-weight: 800; color: var(--text-main); font-size: 18px; letter-spacing: 3px; text-align: center; text-transform: uppercase;">KIZIY</div>
+        <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-align: center; letter-spacing: 1.5px;">key to easy</div>
       </div>
     </div>
   </div>
@@ -5426,9 +5448,14 @@
                         <td>${formatCurrency(p['Harga'])}</td>
                         <td><span class="badge badge-${p['Is Active'] ? 'success' : 'secondary'}">${p['Is Active'] ? 'Aktif' : 'Non-Aktif'}</span></td>
                         <td>
-                          <button class="btn btn-sm btn-outline" onclick="openPackageModal('${p['ID Paket']}')">
-                            <i class="fas fa-edit"></i>
-                          </button>
+                          <div style="display:flex; gap:4px">
+                            <button class="btn btn-sm btn-outline" onclick="openPackageModal('${p['ID Paket']}')" title="Edit Paket">
+                              <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#fecaca" onclick="confirmDeletePackage('${p['ID Paket']}', '${escapeJs(p['Nama Paket'])}')" title="Hapus Paket">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     `).join('')}
@@ -5521,6 +5548,9 @@
                       </button>
                       <button class="btn btn-sm btn-outline" onclick="openAdjustModal('${p.id}', '${escapeJs(p.name)}', ${p.stock})" title="Penyesuaian Stok">
                         <i class="fas fa-sliders-h"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#fecaca" onclick="confirmDeleteProduct('${p.id}', '${escapeJs(p.name)}')" title="Hapus Produk">
+                        <i class="fas fa-trash"></i>
                       </button>
                     </div>
                   </td>
@@ -5834,6 +5864,42 @@
           }
         })
         .processRestock(payload);
+    }
+
+    function confirmDeletePackage(id, name) {
+      showConfirm(`Apakah Anda yakin ingin menghapus paket "${name}"?\n\nTindakan ini tidak dapat dibatalkan.`, function (ok) {
+        if (!ok) return;
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res.success) {
+              showToast('✅ ' + res.message, 'success');
+              loadPackageList();
+            } else {
+              showToast('❌ ' + res.message, 'error');
+            }
+          })
+          .deletePackage(id);
+      });
+    }
+
+    function confirmDeleteProduct(id, name) {
+      showConfirm(`Apakah Anda yakin ingin menghapus produk "${name}"?\n\nTindakan ini tidak dapat dibatalkan.`, function (ok) {
+        if (!ok) return;
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res.success) {
+              showToast('✅ ' + res.message, 'success');
+              loadProductList(true);
+            } else {
+              showToast('❌ ' + res.message, 'error');
+            }
+          })
+          .deleteProduct(id);
+      });
     }
 
     function openAdjustModal(id, name, currentStock) {
@@ -6428,13 +6494,18 @@
                       <div><span class="text-muted">Sisa Hari:</span><br><b style="color:${m.daysLeft <= 7 ? '#f59e0b' : '#22c55e'}">${m.daysLeft} hari</b></div>
                       <div><span class="text-muted">Berlaku s/d:</span><br><b>${formatDate(m.expiry)}</b></div>
                       <div><span class="text-muted">Nomor HP:</span><br><b>${escapeHtml(m.phone)}</b></div>
+                      <div style="grid-column: span 2; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; gap: 20px;">
+                        <div><span class="text-muted">Sisa Paket PT:</span><br><b>${escapeHtml(m.ptPackage || '-')}</b></div>
+                        <div><span class="text-muted">Sisa Sesi PT:</span><br><b style="color:${m.ptSessionsLeft > 0 ? '#8b5cf6' : '#ef4444'}">${m.ptSessionsLeft || 0} Sesi</b></div>
+                      </div>
                     </div>
                     
-                    <div style="margin-bottom:16px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
-                      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-                        <input type="checkbox" id="ci_usePT" style="width:18px;height:18px">
+                    <div style="margin-bottom:16px;padding:10px;background:${m.ptSessionsLeft > 0 ? '#f8fafc' : '#fff1f2'};border-radius:8px;border:1px solid ${m.ptSessionsLeft > 0 ? '#e2e8f0' : '#fecaca'}">
+                      <label style="display:flex;align-items:center;gap:10px;cursor:${m.ptSessionsLeft > 0 ? 'pointer' : 'not-allowed'}; opacity: ${m.ptSessionsLeft > 0 ? '1' : '0.6'}">
+                        <input type="checkbox" id="ci_usePT" style="width:18px;height:18px" ${m.ptSessionsLeft > 0 ? '' : 'disabled'}>
                         <div>
                           <span style="font-weight:600;font-size:13px"><i class="fas fa-dumbbell" style="color:#8b5cf6"></i> Gunakan Sesi Personal Trainer</span>
+                          ${m.ptSessionsLeft <= 0 ? '<div style="font-size:10px;color:#ef4444">Sesi PT tidak tersedia atau sudah habis</div>' : ''}
                         </div>
                       </label>
                     </div>
@@ -7963,9 +8034,11 @@
                   <button class="btn btn-secondary" onclick="loadTransactionList()">
                     <i class="fas fa-receipt"></i> Riwayat Transaksi
                   </button>
-                  <!-- TOMBOL CLEANUP DUPLIKAT BARU -->
                   <button class="btn btn-warning" onclick="showDuplicateCleanupDialog()">
                     <i class="fas fa-broom"></i> Cleanup Duplikat Data
+                  </button>
+                  <button class="btn btn-info" onclick="fixPackageIds()">
+                    <i class="fas fa-magic"></i> Rapikan ID Paket
                   </button>
                   <button class="btn btn-primary" onclick="syncDatabase()">
                     <i class="fas fa-sync"></i> Sinkronisasi Database (Initialisasi)
@@ -7993,6 +8066,24 @@
           createUserCard.innerHTML += '<div style="color:#ef4444; font-size:12px; margin-top:8px">Hanya Super Admin yang dapat mengelola akun user.</div>';
         }
       }
+    }
+
+    function fixPackageIds() {
+      showConfirm('Apakah Anda ingin merapikan ID Katalog Paket?\n\nID akan diperbarui berdasarkan tipe (M untuk Member, PT untuk Trainer, V untuk Visit) dan dipastikan unik.', function(ok) {
+        if (!ok) return;
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function(res) {
+            hideLoading();
+            if (res.success) {
+              showToast('✅ ' + res.message, 'success');
+              if (currentView === 'catalog') loadPackageList();
+            } else {
+              showToast('❌ ' + res.message, 'error');
+            }
+          })
+          .fixPackageCatalogueIds();
+      });
     }
 
     function triggerSetupLeveling() {
