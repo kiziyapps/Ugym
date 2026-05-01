@@ -302,7 +302,7 @@
 
       <div id="memberInfoSection" style="display:none">
         <div class="member-info">
-          <img id="memberPhotoDisplay" class="member-photo" src="" onerror="this.src='https://via.placeholder.com/100?text=No+Photo'">
+          <img id="memberPhotoDisplay" class="member-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E">
           <div class="member-details-grid">
             <h4 style="margin-bottom:12px;color:#000000"><i class="fas fa-user-circle" style="color:#d4af37"></i> Informasi Member</h4>
             <div class="info-row">
@@ -425,7 +425,11 @@
         .withSuccessHandler(function(res) {
           if (res && res.success) {
             packages = res.packages;
+            if (currentMember) renderPackages();
           }
+        })
+        .withFailureHandler(function(err) {
+          console.error('Gagal memuat paket:', err);
         })
         .getPackages();
     }
@@ -515,12 +519,13 @@
           <div class="package-card" onclick="selectPackage('${pkg.id}')" id="pkg-${pkg.id}">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <span class="package-name">${pkg.name}</span>
-              <span class="package-price">${formatCurrency(pkg.total)}</span>
+              <span class="package-price">${formatCurrency(pkg.price || pkg.total)}</span>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:4px">
               <span class="package-duration"><i class="far fa-clock"></i> ${pkg.duration}</span>
-              <span style="color:#94a3b8;font-size:13px">Diskon: ${formatCurrency(pkg.discount)}</span>
+              <span style="color:#94a3b8;font-size:13px">${pkg.discount > 0 ? 'Diskon: ' + formatCurrency(pkg.discount) : ''}</span>
             </div>
+            ${pkg.benefits ? `<div style="margin-top:8px;font-size:11px;color:#64748b;border-top:1px dashed #eee;padding-top:4px"><i class="fas fa-check-circle" style="color:#22c55e"></i> ${pkg.benefits}</div>` : ''}
           </div>`;
       });
       container.innerHTML = html;
