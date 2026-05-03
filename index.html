@@ -2319,15 +2319,15 @@
         <div class="form-group">
           <label class="form-label">Tipe Visit *</label>
           <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
-              <option value="Gym" selected>Gym</option>
-              <option value="Calistenics Privat">Calistenics Privat</option>
-              <option value="Calistenics Group">Calistenics Group</option>
-              <option value="Yoga">Yoga</option>
-              <option value="Zumba">Zumba</option>
-            </select>
-          </div>
+            <option value="Gym" selected>Gym</option>
+            <option value="Calistenics Privat">Calistenics Privat</option>
+            <option value="Calistenics Group">Calistenics Group</option>
+            <option value="Yoga">Yoga</option>
+            <option value="Zumba">Zumba</option>
+          </select>
         </div>
-        <div class="payment-info" style="margin-top:0">
+
+        <div class="payment-info" style="margin-top:20px">
           <div class="payment-row">
             <span>Biaya Visit</span>
             <span id="visitPriceSpan">Rp 25.000</span>
@@ -6915,10 +6915,8 @@
     }
 
     function openVisitModal() {
-      document.getElementById('visit_search').value = '';
-      document.getElementById('visitSearchResults').innerHTML = '';
-      document.getElementById('visit_name').value = '';
-      document.getElementById('visit_phone').value = '';
+      document.getElementById('visit_name').value = 'Visitor';
+      document.getElementById('visit_phone').value = '-';
       document.getElementById('visit_type').value = 'Gym'; // reset to default
       updateVisitPrice();
       document.getElementById('visitModal').style.display = 'flex';
