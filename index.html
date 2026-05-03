@@ -2319,11 +2319,7 @@
         <div class="form-group">
           <label class="form-label">Tipe Visit *</label>
           <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
-            <option value="Gym" selected>Gym</option>
-            <option value="Calistenics Privat">Calistenics Privat</option>
-            <option value="Calistenics Group">Calistenics Group</option>
-            <option value="Yoga">Yoga</option>
-            <option value="Zumba">Zumba</option>
+            <option value="">-- Memuat Paket... --</option>
           </select>
         </div>
 
@@ -6915,41 +6911,53 @@
     }
 
     function openVisitModal() {
+      const typeSelect = document.getElementById('visit_type');
+      typeSelect.innerHTML = '<option value="">-- Memuat Paket... --</option>';
       document.getElementById('visit_name').value = 'Visitor';
       document.getElementById('visit_phone').value = '-';
-      document.getElementById('visit_type').value = 'Gym'; // reset to default
-      updateVisitPrice();
+      
+      google.script.run
+        .withSuccessHandler(function(res) {
+          if (res && res.success && res.packages) {
+            // Filter hanya paket VISIT atau Harian
+            const visitPkgs = res.packages.filter(p => {
+              const t = (p.type || '').toUpperCase();
+              return t === 'VISIT' || t === 'HARIAN' || t.includes('VISIT');
+            });
+            
+            if (visitPkgs.length === 0) {
+              typeSelect.innerHTML = '<option value="">Tidak ada paket VISIT aktif</option>';
+            } else {
+              typeSelect.innerHTML = visitPkgs.map(p => 
+                `<option value="${p.id}" data-price="${p.price}">${escapeHtml(p.name)} - ${formatCurrency(p.price)}</option>`
+              ).join('');
+              updateVisitPrice();
+            }
+          } else {
+            showToast('Gagal memuat paket visit', 'error');
+            typeSelect.innerHTML = '<option value="">Gagal memuat paket</option>';
+          }
+        })
+        .getPackages();
+
       document.getElementById('visitModal').style.display = 'flex';
     }
 
     function updateVisitPrice() {
-      const type = document.getElementById('visit_type').value;
+      const typeSelect = document.getElementById('visit_type');
+      const selectedOption = typeSelect.options[typeSelect.selectedIndex];
       const priceSpan = document.getElementById('visitPriceSpan');
       const totalSpan = document.getElementById('visitTotalSpan');
-      priceSpan.innerHTML = '<span class="spinner"></span>';
-
-      google.script.run
-        .withSuccessHandler(function (res) {
-          let price = 25000;
-          if (res && res.success && res.packages) {
-            const vName = type.toLowerCase().startsWith('visit') ? type : 'visit ' + type;
-            const pkg = res.packages.find(p => p.name.toLowerCase() === vName.toLowerCase());
-            if (pkg) price = pkg.price || pkg.total || 25000;
-            else {
-              const fallbacks = { 'Gym': 25000, 'Calistenics Privat': 100000, 'Calistenics Group': 50000, 'Yoga': 35000, 'Zumba': 35000 };
-              price = fallbacks[type] || 25000;
-            }
-          }
-          priceSpan.textContent = formatCurrency(price);
-          totalSpan.textContent = formatCurrency(price);
-        })
-        .withFailureHandler(function (err) {
-          const fallbacks = { 'Gym': 25000, 'Calistenics Privat': 100000, 'Calistenics Group': 50000, 'Yoga': 35000, 'Zumba': 35000 };
-          const price = fallbacks[type] || 25000;
-          priceSpan.textContent = formatCurrency(price);
-          totalSpan.textContent = formatCurrency(price);
-        })
-        .getPackages();
+      
+      if (!selectedOption || !selectedOption.value) {
+        priceSpan.textContent = 'Rp 0';
+        totalSpan.textContent = 'Rp 0';
+        return;
+      }
+      
+      const price = parseInt(selectedOption.dataset.price) || 0;
+      priceSpan.textContent = formatCurrency(price);
+      totalSpan.textContent = formatCurrency(price);
     }
 
     function searchVisitorForVisit(query) {
@@ -9064,6 +9072,7 @@
             <select id="pkg_type" class="form-input">
               <option value="REGULAR">Regular</option>
               <option value="PT">Personal Trainer</option>
+              <option value="VISIT">Visit / Harian</option>
               <option value="PROMO">Promo / Khusus</option>
             </select>
           </div>
