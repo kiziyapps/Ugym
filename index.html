@@ -2312,24 +2312,13 @@
         <h3>Visit Harian</h3>
       </div>
       <div class="modal-body">
+        <!-- Hidden fields with default values for simplified Visit Harian -->
+        <input type="hidden" id="visit_name" value="Visitor">
+        <input type="hidden" id="visit_phone" value="-">
+        
         <div class="form-group">
-          <label class="form-label"><i class="fas fa-search"></i> Cari Data Visit (Nama/HP)</label>
-          <input id="visit_search" class="form-input" placeholder="Ketik nama atau nomor HP..."
-            oninput="searchVisitorForVisit(this.value)">
-          <div id="visitSearchResults" style="margin-top:8px;max-height:200px;overflow-y:auto;border-radius:8px;"></div>
-        </div>
-        <div style="border-top:1px dashed #cbd5e1;margin:16px 0;padding-top:16px">
-          <div class="form-group">
-            <label class="form-label">Nama Pengunjung *</label>
-            <input id="visit_name" class="form-input" placeholder="Masukkan nama lengkap...">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Nomor HP *</label>
-            <input id="visit_phone" class="form-input" placeholder="Contoh: 081234567890">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Tipe Visit *</label>
-            <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
+          <label class="form-label">Tipe Visit *</label>
+          <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
               <option value="Gym" selected>Gym</option>
               <option value="Calistenics Privat">Calistenics Privat</option>
               <option value="Calistenics Group">Calistenics Group</option>
@@ -2622,7 +2611,7 @@
       if (cleanPhone.startsWith('0')) cleanPhone = '62' + cleanPhone.substring(1);
       else if (!cleanPhone.startsWith('62')) cleanPhone = '62' + cleanPhone;
 
-      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+      const url = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     }
 
@@ -3660,7 +3649,9 @@
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
                     ${pkgs.length ? pkgs.filter(p => {
                       const t = (p.type || '').toLowerCase();
-                      return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit');
+                      const n = (p.name || '').toLowerCase();
+                      return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
+                             !n.includes('harian') && !n.includes('visit');
                     }).map(p => `
                       <div class="pkg-card" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-dur="${p.duration}" onclick="selectPkg(this)">
                         <div style="font-weight:600;margin-bottom:6px">${escapeHtml(p.name)}</div>
@@ -4370,7 +4361,9 @@
                       <option value="">-- Pilih Paket --</option>
                       ${pkgs.filter(p => {
                         const t = (p.type || '').toLowerCase();
-                        return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit');
+                        const n = (p.name || '').toLowerCase();
+                        return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
+                               !n.includes('harian') && !n.includes('visit');
                       }).map(p =>
             `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" data-duration="${p.duration}">${escapeHtml(p.name)} - ${formatCurrency(p.price)} (${escapeHtml(p.duration)})</option>`
           ).join('')}
@@ -7008,11 +7001,8 @@
     }
 
     function processVisitCheckinSubmit() {
-      const name = document.getElementById('visit_name').value.trim();
-      const phone = document.getElementById('visit_phone').value.trim();
-
-      if (!name) { showToast('Masukkan nama pengunjung', 'warning'); return; }
-      if (!phone) { showToast('Masukkan nomor HP', 'warning'); return; }
+      const name = document.getElementById('visit_name').value || 'Visitor';
+      const phone = document.getElementById('visit_phone').value || '-';
 
       showLoading();
       const btn = document.getElementById('btnSubmitVisit');
@@ -9074,7 +9064,6 @@
           <div class="form-group">
             <label class="form-label">Tipe Paket</label>
             <select id="pkg_type" class="form-input">
-              <option value="VISIT">Visit</option>
               <option value="REGULAR">Regular</option>
               <option value="PT">Personal Trainer</option>
               <option value="PROMO">Promo / Khusus</option>
