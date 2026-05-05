@@ -379,20 +379,18 @@
 
     .top-bar {
       position: sticky;
-      top: 0;
-      z-index: 990;
+      top: -32px;
+      z-index: 1001;
       background: var(--glass-bg);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      padding: 16px 24px;
-      margin-bottom: 24px;
+      padding: 16px 32px;
+      margin: -32px -32px 24px -32px;
       border-bottom: 1px solid var(--border-color);
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: -32px;
-      margin-left: -32px;
-      margin-right: -32px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
     .sidebar-overlay {
