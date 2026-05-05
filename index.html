@@ -4602,12 +4602,14 @@
       // Direct Profile Fetch: Try Local Cache First
       const localResults = localSearchMember(q);
       if (localResults && localResults.length > 0) {
-        // Pick the best match (exact ID match has priority, otherwise first result)
         const exactMatch = localResults.find(m => (m.memberId || '').toUpperCase() === q.toUpperCase());
         const bestMatch = exactMatch || localResults[0];
-        
-        // Directly preview the profile
         previewMemberCheckin(bestMatch.memberId);
+      } else {
+        // Fallback: If not found locally, try server fetch after delay
+        window.ciSearchTimeout = setTimeout(function () {
+          previewMemberCheckin(q);
+        }, 800);
       }
     }
 
