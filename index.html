@@ -82,7 +82,112 @@
           }
         })
       }
-    };  </script>
+    };
+
+    // ================ LOCAL CACHE & SYNC MANAGER ================
+    const LocalCache = {
+      prefix: 'ugym_cache_',
+      set: function (key, data, expiryMinutes = 60) {
+        const item = {
+          data: data,
+          expiry: Date.now() + (expiryMinutes * 60 * 1000)
+        };
+        try {
+          localStorage.setItem(this.prefix + key, JSON.stringify(item));
+        } catch (e) {
+          console.warn('Cache full or localStorage disabled', e);
+        }
+      },
+      get: function (key) {
+        try {
+          const itemStr = localStorage.getItem(this.prefix + key);
+          if (!itemStr) return null;
+          const item = JSON.parse(itemStr);
+          if (Date.now() > item.expiry) {
+            localStorage.removeItem(this.prefix + key);
+            return null;
+          }
+          return item.data;
+        } catch (e) {
+          return null;
+        }
+      },
+      remove: function (key) {
+        localStorage.removeItem(this.prefix + key);
+      },
+      clear: function () {
+        Object.keys(localStorage).forEach(k => {
+          if (k.startsWith(this.prefix)) localStorage.removeItem(k);
+        });
+      }
+    };
+
+    const SyncManager = {
+      isSyncing: false,
+      lastSync: 0,
+      syncInterval: 5 * 60 * 1000, // 5 menit default
+
+      init: function () {
+        console.log('🔄 SyncManager Initialized');
+        this.lastSync = parseInt(localStorage.getItem('ugym_last_sync') || '0');
+        
+        // Jalankan sync pertama kali setelah login
+        if (currentUser) this.start();
+      },
+
+      start: function () {
+        this.runSync();
+        setInterval(() => this.runSync(), this.syncInterval);
+      },
+
+      runSync: function (force = false) {
+        if (this.isSyncing || !currentUser) return;
+        if (!force && (Date.now() - this.lastSync < this.syncInterval)) return;
+
+        console.log('🚀 Starting Background Sync...');
+        this.isSyncing = true;
+        const self = this;
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            self.isSyncing = false;
+            if (res && res.success) {
+              console.log('✅ Sync Completed:', res.summary);
+              self.lastSync = Date.now();
+              localStorage.setItem('ugym_last_sync', self.lastSync.toString());
+              
+              // Simpan hasil sync ke cache
+              if (res.data.products) LocalCache.set('pos_products', res.data.products, 60);
+              if (res.data.packages) LocalCache.set('catalogue_packages', res.data.packages, 60);
+              if (res.data.stats) LocalCache.set('dashboard_stats', res.data.stats, 30);
+              if (res.data.members) LocalCache.set('all_members', res.data.members, 120);
+              
+              // Trigger event untuk UI yang butuh update
+              window.dispatchEvent(new CustomEvent('ugym_sync_complete', { detail: res.data }));
+            }
+          })
+          .withFailureHandler(function (err) {
+            self.isSyncing = false;
+            console.error('❌ Sync Failed:', err);
+          })
+          .getSyncData(this.lastSync);
+      }
+    };
+
+    function localSearchMember(query) {
+      const q = query.toLowerCase().trim();
+      if (q.length < 2) return null;
+
+      const all = LocalCache.get('all_members');
+      if (!all || all.length === 0) return null;
+
+      return all.filter(m =>
+        (m.fullName || '').toLowerCase().includes(q) ||
+        (m.memberId || '').toLowerCase().includes(q) ||
+        (m.phone || '').includes(q)
+      ).slice(0, 10);
+    }
+  </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -3010,6 +3115,9 @@
             applyRolePermissions();
             showView('dashboard');
             loadApprovalCount();
+            
+            // Initialize Background Sync
+            SyncManager.init();
           } else {
             showAlert('loginAlert', res?.message || 'Login gagal', 'error');
           }
@@ -3027,6 +3135,7 @@
         if (!ok) return;
         currentUser = null;
         stopScanner();
+        LocalCache.clear(); // Clear cache on logout for security
         document.getElementById('dashboardView').style.display = 'none';
         document.getElementById('authView').style.display = 'flex';
         renderLoginForm();
@@ -3304,30 +3413,48 @@
     }
 
     function fetchDashboardData(start, end) {
+      if (!start && !end) {
+        const cached = LocalCache.get('dashboard_stats');
+        if (cached) {
+          console.log('📊 Loaded Dashboard Stats from Cache');
+          updateDashboardUI(cached);
+          // Still fetch in background
+        }
+      }
+
       google.script.run
         .withSuccessHandler(function (res) {
           console.log('Dashboard data received:', res);
 
           if (res && res.success) {
-            const s = res.stats;
+            updateDashboardUI(res.stats);
+            if (!start && !end) LocalCache.set('dashboard_stats', res.stats, 30);
+          }
+        })
+        .withFailureHandler(function (err) {
+          console.error('Fetch dashboard error:', err);
+        })
+        .getDashboardStats(start, end);
+    }
 
-            // Period Info
-            const periodEl = document.getElementById('dashboardPeriod');
-            const periodVal = document.getElementById('periodValue');
-            const titleEl = document.getElementById('checkinTableTitle');
-            if (periodEl && periodVal) {
-              if (s.isFiltered) {
-                periodEl.style.display = 'flex';
-                periodVal.textContent = s.period;
-                if (titleEl) titleEl.innerHTML = `<i class="fas fa-history" style="color:#64748b"></i> Aktivitas Check-In (${s.period})`;
-              } else {
-                periodEl.style.display = 'none';
-                if (titleEl) titleEl.innerHTML = `<i class="fas fa-history" style="color:#64748b"></i> Aktivitas Check-In Terbaru`;
-              }
-            }
+    function updateDashboardUI(s) {
+      // Period Info
+      const periodEl = document.getElementById('dashboardPeriod');
+      const periodVal = document.getElementById('periodValue');
+      const titleEl = document.getElementById('checkinTableTitle');
+      if (periodEl && periodVal) {
+        if (s.isFiltered) {
+          periodEl.style.display = 'flex';
+          periodVal.textContent = s.period;
+          if (titleEl) titleEl.innerHTML = `<i class="fas fa-history" style="color:#64748b"></i> Aktivitas Check-In (${s.period})`;
+        } else {
+          periodEl.style.display = 'none';
+          if (titleEl) titleEl.innerHTML = `<i class="fas fa-history" style="color:#64748b"></i> Aktivitas Check-In Terbaru`;
+        }
+      }
 
-            // Fitness Stats
-            if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = s.total || 0;
+      // Fitness Stats
+      if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = s.total || 0;
             if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
             if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
             if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
@@ -4410,82 +4537,67 @@
     }
 
     function searchMemberForTrx(query) {
-      if (window.trxSearchTimeout) {
-        clearTimeout(window.trxSearchTimeout);
-      }
+      if (window.trxSearchTimeout) clearTimeout(window.trxSearchTimeout);
 
-      const searchInput = query.trim();
-      if (searchInput.length < 2) {
+      const q = query.trim();
+      if (q.length < 2) {
         document.getElementById('memberSearchResults').innerHTML = '';
         return;
       }
 
-      const resultsEl = document.getElementById('memberSearchResults');
-      resultsEl.innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Mencari...</div>';
+      // 1. Try Local Search first for instant feedback
+      const localResults = localSearchMember(q);
+      if (localResults) {
+        console.log('⚡ Local Search Match:', localResults.length);
+        renderMemberSearchResults(localResults, 'memberSearchResults', 'selectMemberForTrx');
+        // Still fire server search in background to ensure freshness, but no spinner
+      } else {
+        document.getElementById('memberSearchResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Mencari...</div>';
+      }
 
       window.trxSearchTimeout = setTimeout(function () {
         google.script.run
           .withSuccessHandler(function (res) {
-            console.log('Search results:', res);
-
-            const el = document.getElementById('memberSearchResults');
-            if (!el) return;
-
-            if (res && res.success && res.members && res.members.length > 0) {
-              let html = '';
-              res.members.slice(0, 5).forEach(m => {
-                let statusClass = 'warning';
-                if (m.status === 'Aktif') statusClass = 'success';
-                else if (m.status === 'Expired') statusClass = 'danger';
-
-                const memberJson = JSON.stringify(m).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
-
-                html += `
-                  <div onclick="selectMemberForTrx('${memberJson}')" 
-                       style="padding:12px 14px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:13px;transition:0.2s" 
-                       onmouseover="this.style.background='#f0f4ff'" 
-                       onmouseout="this.style.background='white'">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-                      <div>
-                        <i class="fas fa-user-circle" style="color:#667eea;margin-right:4px"></i>
-                        <b>${escapeHtml(m.fullName)}</b>
-                      </div>
-                      <span class="badge badge-${statusClass}">${escapeHtml(m.status || 'Non Aktif')}</span>
-                    </div>
-                    <div style="display:flex;gap:12px;color:#475569;margin-top:4px">
-                      <span><i class="fas fa-id-card" style="font-size:11px"></i> <code>${escapeHtml(m.memberId)}</code></span>
-                      <span><i class="fas fa-phone"></i> ${escapeHtml(m.phone)}</span>
-                    </div>
-                    <div style="color:#64748b;font-size:12px;margin-top:4px;padding-top:4px;border-top:1px dashed #e2e8f0">
-                      <i class="fas fa-box"></i> ${escapeHtml(m.currentPackage || '-')} · 
-                      <i class="far fa-calendar"></i> Exp: ${formatDate(m.expiryDate)}
-                    </div>
-                  </div>
-                `;
-              });
-              el.innerHTML = html;
-            } else {
-              el.innerHTML = `
-                <div style="padding:20px;text-align:center;background:#f8fafc;border-radius:8px">
-                  <i class="fas fa-search" style="color:#94a3b8;font-size:24px;margin-bottom:8px;display:block"></i>
-                  <p style="color:#64748b;font-size:13px">Tidak ada member ditemukan dengan kata kunci "${escapeHtml(searchInput)}"</p>
-                </div>
-              `;
+            if (res && res.success && res.members) {
+              // Update local cache if this is a broad search or we got new data
+              renderMemberSearchResults(res.members, 'memberSearchResults', 'selectMemberForTrx');
             }
           })
-          .withFailureHandler(function (err) {
-            console.error('Search error:', err);
-            const el = document.getElementById('memberSearchResults');
-            if (el) {
-              el.innerHTML = `
-                <div style="padding:15px;text-align:center;background:#fef2f2;border-radius:8px;color:#991b1b">
-                  <i class="fas fa-exclamation-triangle"></i> Gagal mencari: ${err.message}
-                </div>
-              `;
-            }
-          })
-          .searchMembers(searchInput);
-      }, 300);
+          .searchMembers(q);
+      }, localResults ? 1000 : 300); // Delay server search if we already have local results
+    }
+
+    function renderMemberSearchResults(members, elementId, selectFnName) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      if (!members || members.length === 0) {
+        el.innerHTML = `<div style="padding:20px;text-align:center;background:#f8fafc;border-radius:8px"><p style="color:#64748b;font-size:13px">Tidak ada member ditemukan</p></div>`;
+        return;
+      }
+
+      let html = '';
+      members.slice(0, 10).forEach(m => {
+        const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
+        const memberJson = JSON.stringify(m).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+
+        html += `
+          <div onclick="${selectFnName}('${memberJson}')" 
+               style="padding:12px 14px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:13px;transition:0.2s" 
+               onmouseover="this.style.background='#f0f4ff'" 
+               onmouseout="this.style.background='white'">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+              <div><b>${escapeHtml(m.fullName)}</b></div>
+              <span class="badge badge-${statusClass}">${escapeHtml(m.status)}</span>
+            </div>
+            <div style="display:flex;gap:12px;color:#475569;font-size:12px">
+              <span>ID: ${escapeHtml(m.memberId)}</span>
+              <span>Tel: ${escapeHtml(m.phone)}</span>
+            </div>
+          </div>
+        `;
+      });
+      el.innerHTML = html;
     }
 
     function searchMemberForCheckin(query) {
@@ -5049,15 +5161,35 @@
     }
 
     function loadPOSProducts(force = false) {
-      if (!force && posProducts && posProducts.length > 0) {
-        renderPOSCategories();
-        renderPOSProducts();
-        return;
+      if (!force) {
+        // 1. Check Memory
+        if (posProducts && posProducts.length > 0) {
+          renderPOSCategories();
+          renderPOSProducts();
+          return;
+        }
+        // 2. Check LocalCache
+        const cached = LocalCache.get('pos_products');
+        if (cached) {
+          console.log('📦 Loaded POS Products from Cache');
+          posProducts = cached;
+          const cats = ['All'];
+          posProducts.forEach(p => {
+            if (p.category && !cats.includes(p.category)) cats.push(p.category);
+          });
+          posCategories = cats;
+          renderPOSCategories();
+          renderPOSProducts();
+          return;
+        }
       }
+
+      console.log('🌐 Fetching POS Products from Server...');
       google.script.run
         .withSuccessHandler(function (res) {
           if (res && res.success) {
             posProducts = res.products;
+            LocalCache.set('pos_products', posProducts, 60);
 
             // Extract categories
             const cats = ['All'];
@@ -9012,8 +9144,9 @@
 
       google.script.run
         .withSuccessHandler(function (res) {
-          if (res.success) {
+          if (res && res.success) {
             updateDashboardCounters(res.stats);
+            LocalCache.set('dashboard_stats', res.stats, 30); // Keep cache fresh
             const timeEl = document.getElementById('lastSyncTime');
             if (timeEl) timeEl.textContent = 'LIVE: ' + new Date().toLocaleTimeString('id-ID');
           }
