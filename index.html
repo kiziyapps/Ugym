@@ -154,6 +154,7 @@
         if (!force && (Date.now() - this.lastSync < this.syncInterval)) return;
 
         console.log('🚀 Starting Background Sync...');
+        this.updateIndicator('syncing', 'Syncing...');
         this.isSyncing = true;
         const self = this;
 
@@ -173,13 +174,23 @@
 
               // Trigger event untuk UI yang butuh update
               window.dispatchEvent(new CustomEvent('ugym_sync_complete', { detail: res.data }));
+              
+              self.updateIndicator('success', 'Updated!');
+              setTimeout(() => self.updateIndicator('online', 'Online'), 3000);
             }
           })
           .withFailureHandler(function (err) {
             self.isSyncing = false;
             console.error('❌ Sync Failed:', err);
+            self.updateIndicator('online', 'Offline?');
           })
           .getSyncData(this.lastSync);
+      },
+      updateIndicator: function (status, text) {
+        const dot = document.getElementById('syncStatusDot');
+        const txt = document.getElementById('syncStatusText');
+        if (dot) dot.className = 'status-dot ' + status;
+        if (txt) txt.textContent = text;
       }
     };
 
@@ -572,6 +583,31 @@
 
     .menu-item.active i {
       opacity: 1;
+    }
+
+    /* Status Indicator Styles */
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+    .status-dot.online { background: #34C759; box-shadow: 0 0 8px rgba(52, 199, 89, 0.6); }
+    .status-dot.syncing { 
+      background: #FF9500; 
+      box-shadow: 0 0 10px rgba(255, 149, 0, 0.8);
+      animation: pulseSync 1s infinite;
+    }
+    .status-dot.success { 
+      background: #007AFF; 
+      box-shadow: 0 0 15px rgba(0, 122, 255, 0.9);
+      transform: scale(1.3);
+    }
+    @keyframes pulseSync {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+      100% { opacity: 1; transform: scale(1); }
     }
 
     /* Widgets & Form Elements */
@@ -2523,8 +2559,13 @@
           <img src="https://i.imgur.com/PAB0dhW.png" style="width:48px;height:48px;border-radius:50%;object-fit:cover">
           <div>
             <div id="userName" style="font-size:15px;font-weight:600">-</div>
-            <span id="userRole"
-              style="font-size:11px;opacity:0.8;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:12px">-</span>
+            <div style="display:flex; align-items:center; gap:8px">
+              <span id="userRole" style="font-size:11px;opacity:0.8;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:12px">-</span>
+              <div style="display:flex; align-items:center; gap:4px">
+                <span id="syncStatusDot" class="status-dot online"></span>
+                <span id="syncStatusText" style="font-size:10px; opacity:0.6; font-weight:500">Online</span>
+              </div>
+            </div>
           </div>
         </div>
         <button class="btn-close-sidebar" onclick="toggleSidebar()">
