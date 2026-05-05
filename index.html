@@ -142,6 +142,13 @@
 
         // Jalankan sync pertama kali setelah login
         if (currentUser) this.start();
+        
+        // Listeners untuk perubahan koneksi
+        window.addEventListener('online', () => this.updateIndicator('online', 'Online'));
+        window.addEventListener('offline', () => this.updateIndicator('offline', 'Offline'));
+        
+        // Cek status awal
+        if (!navigator.onLine) this.updateIndicator('offline', 'Offline');
       },
 
       start: function () {
@@ -603,6 +610,10 @@
       background: #007AFF; 
       box-shadow: 0 0 15px rgba(0, 122, 255, 0.9);
       transform: scale(1.3);
+    }
+    .status-dot.offline { 
+      background: #FF3B30; 
+      box-shadow: 0 0 10px rgba(255, 59, 48, 0.8); 
     }
     @keyframes pulseSync {
       0% { opacity: 1; transform: scale(1); }
