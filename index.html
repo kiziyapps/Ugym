@@ -4593,66 +4593,22 @@
     function searchMemberForCheckin(query) {
       if (window.ciSearchTimeout) clearTimeout(window.ciSearchTimeout);
       const q = query.trim();
-      if (q.length < 2) {
-        document.getElementById('ciMemberResults').innerHTML = '';
+      if (q.length < 3) {
+        // Clear preview if input is too short
+        if (q.length === 0) document.getElementById('checkinPreviewArea').innerHTML = '';
         return;
       }
 
-      // 1. Try Local Search first
+      // Direct Profile Fetch: Try Local Cache First
       const localResults = localSearchMember(q);
-      if (localResults) {
-        // If EXACT ID match found, trigger selection immediately to skip the list
+      if (localResults && localResults.length > 0) {
+        // Pick the best match (exact ID match has priority, otherwise first result)
         const exactMatch = localResults.find(m => (m.memberId || '').toUpperCase() === q.toUpperCase());
-        if (exactMatch) {
-          selectMemberForCheckin(exactMatch.memberId);
-          return;
-        }
+        const bestMatch = exactMatch || localResults[0];
         
-        // Show results immediately
-        renderCheckinSearchResults(localResults);
-      } else {
-        document.getElementById('ciMemberResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Mencari...</div>';
+        // Directly preview the profile
+        previewMemberCheckin(bestMatch.memberId);
       }
-
-      window.ciSearchTimeout = setTimeout(function () {
-        google.script.run
-          .withSuccessHandler(function (res) {
-            if (res && res.success && res.members) {
-              renderCheckinSearchResults(res.members);
-            }
-          })
-          .searchMembers(q);
-      }, localResults ? 1000 : 300);
-    }
-
-    function renderCheckinSearchResults(members) {
-      const el = document.getElementById('ciMemberResults');
-      if (!el) return;
-      if (members.length === 0) {
-        el.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8">Tidak ditemukan</div>';
-        return;
-      }
-      let html = '';
-      members.slice(0, 5).forEach(m => {
-        const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
-        html += `
-          <div onclick="selectMemberForCheckin('${m.memberId}')" 
-               style="padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:12px">
-            <div style="display:flex;justify-content:space-between">
-              <b>${escapeHtml(m.fullName)}</b>
-              <span class="badge badge-${statusClass}" style="font-size:10px">${m.status}</span>
-            </div>
-            <div style="color:#64748b;font-size:11px">ID: ${m.memberId} | HP: ${m.phone}</div>
-          </div>
-        `;
-      });
-      el.innerHTML = html;
-    }
-
-    function selectMemberForCheckin(id) {
-      document.getElementById('ci_memberId').value = id;
-      document.getElementById('ciMemberResults').innerHTML = '';
-      previewMemberCheckin(id);
     }
 
     function searchMemberForPOS(query) {
@@ -6506,10 +6462,9 @@
                 </h4>
                 <div class="form-group">
                   <label class="form-label">Member ID / Nama / HP</label>
-                  <input id="ci_memberId" class="form-input" placeholder="Cari ID, Nama, atau No. HP..." oninput="searchMemberForCheckin(this.value)">
-                  <div id="ciMemberResults" style="margin-top:8px;max-height:250px;overflow-y:auto;border-radius:8px;"></div>
+                  <input id="ci_memberId" class="form-input" placeholder="Ketik ID, Nama, atau No. HP..." oninput="searchMemberForCheckin(this.value)" autocomplete="off">
                 </div>
-                <p style="font-size:13px;color:#64748b;margin-bottom:12px">Setelah data dipilih, detail member akan muncul untuk konfirmasi.</p>
+                <p style="font-size:13px;color:#64748b;margin-bottom:12px">Profil member akan muncul secara otomatis di atas.</p>
                 <button class="btn btn-info btn-block" onclick="openVisitModal()">
                   <i class="fas fa-walking"></i> Visit Harian (Rp 25.000)
                 </button>
