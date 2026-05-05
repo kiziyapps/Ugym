@@ -4592,39 +4592,61 @@
 
     function searchMemberForCheckin(query) {
       if (window.ciSearchTimeout) clearTimeout(window.ciSearchTimeout);
-      const searchInput = query.trim();
-      if (searchInput.length < 2) {
+      const q = query.trim();
+      if (q.length < 2) {
         document.getElementById('ciMemberResults').innerHTML = '';
         return;
       }
-      document.getElementById('ciMemberResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Mencari...</div>';
+
+      // 1. Try Local Search first
+      const localResults = localSearchMember(q);
+      if (localResults) {
+        // If EXACT ID match found, trigger selection immediately to skip the list
+        const exactMatch = localResults.find(m => (m.memberId || '').toUpperCase() === q.toUpperCase());
+        if (exactMatch) {
+          selectMemberForCheckin(exactMatch.memberId);
+          return;
+        }
+        
+        // Show results immediately
+        renderCheckinSearchResults(localResults);
+      } else {
+        document.getElementById('ciMemberResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Mencari...</div>';
+      }
+
       window.ciSearchTimeout = setTimeout(function () {
         google.script.run
           .withSuccessHandler(function (res) {
-            const el = document.getElementById('ciMemberResults');
-            if (!el) return;
-            if (res && res.success && res.members && res.members.length > 0) {
-              let html = '';
-              res.members.slice(0, 5).forEach(m => {
-                const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
-                html += `
-                  <div onclick="selectMemberForCheckin('${m.memberId}')" 
-                       style="padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:12px">
-                    <div style="display:flex;justify-content:space-between">
-                      <b>${escapeHtml(m.fullName)}</b>
-                      <span class="badge badge-${statusClass}" style="font-size:10px">${m.status}</span>
-                    </div>
-                    <div style="color:#64748b;font-size:11px">ID: ${m.memberId} | HP: ${m.phone}</div>
-                  </div>
-                `;
-              });
-              el.innerHTML = html;
-            } else {
-              el.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8">Tidak ditemukan</div>';
+            if (res && res.success && res.members) {
+              renderCheckinSearchResults(res.members);
             }
           })
-          .searchMembers(searchInput);
-      }, 300);
+          .searchMembers(q);
+      }, localResults ? 1000 : 300);
+    }
+
+    function renderCheckinSearchResults(members) {
+      const el = document.getElementById('ciMemberResults');
+      if (!el) return;
+      if (members.length === 0) {
+        el.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8">Tidak ditemukan</div>';
+        return;
+      }
+      let html = '';
+      members.slice(0, 5).forEach(m => {
+        const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
+        html += `
+          <div onclick="selectMemberForCheckin('${m.memberId}')" 
+               style="padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:12px">
+            <div style="display:flex;justify-content:space-between">
+              <b>${escapeHtml(m.fullName)}</b>
+              <span class="badge badge-${statusClass}" style="font-size:10px">${m.status}</span>
+            </div>
+            <div style="color:#64748b;font-size:11px">ID: ${m.memberId} | HP: ${m.phone}</div>
+          </div>
+        `;
+      });
+      el.innerHTML = html;
     }
 
     function selectMemberForCheckin(id) {
@@ -4635,36 +4657,29 @@
 
     function searchMemberForPOS(query) {
       if (window.posSearchTimeout) clearTimeout(window.posSearchTimeout);
-      const searchInput = query.trim();
-      if (searchInput.length < 2) {
+      const q = query.trim();
+      if (q.length < 2) {
         document.getElementById('posMemberResults').innerHTML = '';
         return;
       }
-      document.getElementById('posMemberResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i></div>';
+
+      // Try Local Search
+      const localResults = localSearchMember(q);
+      if (localResults) {
+        renderMemberSearchResults(localResults, 'posMemberResults', 'selectMemberForPOS');
+      } else {
+        document.getElementById('posMemberResults').innerHTML = '<div style="text-align:center;padding:10px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i></div>';
+      }
+
       window.posSearchTimeout = setTimeout(function () {
         google.script.run
           .withSuccessHandler(function (res) {
-            const el = document.getElementById('posMemberResults');
-            if (!el) return;
-            if (res && res.success && res.members && res.members.length > 0) {
-              let html = '';
-              res.members.slice(0, 5).forEach(m => {
-                const memberJson = JSON.stringify(m).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
-                html += `
-                  <div onclick="selectMemberForPOS('${memberJson}')" 
-                       style="padding:10px;background:white;border-bottom:1px solid #f1f5f9;cursor:pointer;font-size:12px">
-                    <b>${escapeHtml(m.fullName)}</b> (${m.memberId})
-                    <div style="color:#64748b;font-size:11px">${m.phone}</div>
-                  </div>
-                `;
-              });
-              el.innerHTML = html;
-            } else {
-              el.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#94a3b8">Tidak ditemukan</div>';
+            if (res && res.success && res.members) {
+              renderMemberSearchResults(res.members, 'posMemberResults', 'selectMemberForPOS');
             }
           })
-          .searchMembers(searchInput);
-      }, 300);
+          .searchMembers(q);
+      }, localResults ? 1000 : 300);
     }
 
     function selectMemberForPOS(json) {
@@ -6564,7 +6579,6 @@
           } else {
             el.innerHTML = `
               <div style="text-align:center;padding:40px;color:#94a3b8">
-                <i class="fas fa-calendar-day fa-3x" style="margin-bottom:16px;color:#cbd5e1"></i>
                 <p>Belum ada check-in hari ini</p>
               </div>
             `;
@@ -6582,79 +6596,32 @@
 
     function previewMemberCheckin(scannedId) {
       const mid = scannedId || (document.getElementById('ci_memberId')?.value || '').trim().toUpperCase();
-      if (!mid) {
-        showToast('Masukkan atau scan Member ID', 'warning');
-        return;
-      }
+      if (!mid) return;
 
-      // Clear previous results/previews
+      // 1. Clear & Show Placeholder
       document.getElementById('checkinResult').innerHTML = '';
       const previewArea = document.getElementById('checkinPreviewArea');
-      previewArea.innerHTML = `
-        <div style="text-align:center;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:20px">
-          <i class="fas fa-spinner fa-spin fa-2x" style="color:#667eea;margin-bottom:12px"></i>
-          <p style="color:#64748b">Mengambil data member...</p>
-        </div>
-      `;
+      
+      // 2. Try Instant Local Preview from Cache
+      const all = LocalCache.get('all_members') || [];
+      const localM = all.find(m => (m.memberId || '').toUpperCase() === mid.toUpperCase());
+      
+      if (localM) {
+        console.log('⚡ Showing Instant Local Preview');
+        renderCheckinProfile(localM, true);
+      } else {
+        previewArea.innerHTML = `
+          <div style="text-align:center;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:20px">
+            <i class="fas fa-spinner fa-spin fa-2x" style="color:#667eea;margin-bottom:12px"></i>
+            <p style="color:#64748b">Mengambil data member...</p>
+          </div>
+        `;
+      }
 
       google.script.run
         .withSuccessHandler(function (res) {
           if (res && res.success) {
-            const m = res.member;
-            const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
-            const profilePic = getDirectLink(m.profilePic) || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E";
-
-            previewArea.innerHTML = `
-              <div class="result-card" style="display:block;margin-bottom:20px;border-left:6px solid ${m.status === 'Aktif' ? '#22c55e' : '#ef4444'}; animation: fadeIn 0.3s ease">
-                <div style="display:flex;gap:20px;align-items:start">
-                  <div style="flex-shrink:0">
-                    <img src="${profilePic}" style="width:130px;height:130px;border-radius:12px;object-fit:cover;border:3px solid #f1f5f9;background:#f8fafc" onerror="this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E'">
-                  </div>
-                  <div style="flex-grow:1">
-                    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
-                      <div>
-                        <h3 style="margin:0;color:#1e293b">${escapeHtml(m.name)}</h3>
-                        <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:13px">${escapeHtml(m.id)}</code>
-                      </div>
-                      <span class="badge badge-${statusClass}">${escapeHtml(m.status)}</span>
-                    </div>
-                    
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;margin-bottom:12px">
-                      <div><span class="text-muted">Paket:</span><br><b>${escapeHtml(m.package)}</b></div>
-                      <div><span class="text-muted">Sisa Hari:</span><br><b style="color:${m.daysLeft <= 7 ? '#f59e0b' : '#22c55e'}">${m.daysLeft} hari</b></div>
-                      <div><span class="text-muted">Berlaku s/d:</span><br><b>${formatDate(m.expiry)}</b></div>
-                      <div><span class="text-muted">Nomor HP:</span><br><b>${escapeHtml(m.phone)}</b></div>
-                      <div style="grid-column: span 2; padding-top: 8px; border-top: 1px solid #f1f5f9; display: flex; gap: 20px;">
-                        <div><span class="text-muted">Sisa Paket PT:</span><br><b>${escapeHtml(m.ptPackage || '-')}</b></div>
-                        <div><span class="text-muted">Sisa Sesi PT:</span><br><b style="color:${m.ptSessionsLeft > 0 ? '#8b5cf6' : '#ef4444'}">${m.ptSessionsLeft || 0} Sesi</b></div>
-                      </div>
-                    </div>
-                    
-                    <div style="margin-bottom:16px;padding:10px;background:${m.ptSessionsLeft > 0 ? '#f8fafc' : '#fff1f2'};border-radius:8px;border:1px solid ${m.ptSessionsLeft > 0 ? '#e2e8f0' : '#fecaca'}">
-                      <label style="display:flex;align-items:center;gap:10px;cursor:${m.ptSessionsLeft > 0 ? 'pointer' : 'not-allowed'}; opacity: ${m.ptSessionsLeft > 0 ? '1' : '0.6'}">
-                        <input type="checkbox" id="ci_usePT" style="width:18px;height:18px" ${m.ptSessionsLeft > 0 ? '' : 'disabled'}>
-                        <div>
-                          <span style="font-weight:600;font-size:13px"><i class="fas fa-dumbbell" style="color:#8b5cf6"></i> Gunakan Sesi Personal Trainer</span>
-                          ${m.ptSessionsLeft <= 0 ? '<div style="font-size:10px;color:#ef4444">Sesi PT tidak tersedia atau sudah habis</div>' : ''}
-                        </div>
-                      </label>
-                    </div>
-                    
-                    <div style="display:flex;gap:10px">
-                      <button id="btnConfirmCheckin" class="btn btn-success" onclick="doCheckinWithPT('${m.id}')" style="flex:1">
-                        <i class="fas fa-check-circle"></i> Konfirmasi Check-In
-                      </button>
-                      <button class="btn btn-secondary" onclick="document.getElementById('checkinPreviewArea').innerHTML=''">
-                        <i class="fas fa-times"></i> Batal
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            `;
-
-            // Scroll to preview
-            document.getElementById('checkinPreviewArea').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            renderCheckinProfile(res.member, false);
           } else {
             previewArea.innerHTML = `
               <div class="checkin-error-card" style="margin-bottom:20px">
@@ -6666,9 +6633,66 @@
           }
         })
         .withFailureHandler(function (err) {
-          previewArea.innerHTML = '<p class="text-danger">Gagal memverifikasi member: ' + err.message + '</p>';
+          console.error('Checkin preview error:', err);
         })
         .getMemberDetail(mid);
+    }
+
+    function renderCheckinProfile(m, isLocal = false) {
+      const previewArea = document.getElementById('checkinPreviewArea');
+      const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
+      const profilePic = m.profilePic ? getDirectLink(m.profilePic) : (m.fullName ? null : null);
+      const defaultPic = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E";
+
+      previewArea.innerHTML = `
+        <div class="result-card" style="display:block;margin-bottom:20px;border-left:6px solid ${m.status === 'Aktif' ? '#22c55e' : '#ef4444'}; opacity: ${isLocal ? '0.7' : '1'}; transition: 0.3s">
+          <div style="display:flex;gap:20px;align-items:start">
+            <div style="flex-shrink:0; position: relative;">
+              <img src="${profilePic || defaultPic}" style="width:130px;height:130px;border-radius:12px;object-fit:cover;border:3px solid #f1f5f9;background:#f8fafc" onerror="this.src='${defaultPic}'">
+              ${isLocal ? '<div style="position:absolute;top:5px;right:5px;background:rgba(255,255,255,0.8);border-radius:50%;padding:4px;font-size:10px"><i class="fas fa-clock fa-spin"></i></div>' : ''}
+            </div>
+            <div style="flex-grow:1">
+              <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
+                <div>
+                  <h3 style="margin:0;color:#1e293b">${escapeHtml(m.fullName || m.name)}</h3>
+                  <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:13px">${escapeHtml(m.memberId || m.id)}</code>
+                </div>
+                <span class="badge badge-${statusClass}">${escapeHtml(m.status)}</span>
+              </div>
+              
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;margin-bottom:12px">
+                <div><span class="text-muted">Paket:</span><br><b>${escapeHtml(m.currentPackage || m.package || '-')}</b></div>
+                <div><span class="text-muted">Sisa Hari:</span><br><b style="color:${m.daysLeft <= 7 ? '#f59e0b' : '#22c55e'}">${m.daysLeft || 0} hari</b></div>
+                <div><span class="text-muted">Berlaku s/d:</span><br><b>${formatDate(m.expiryDate || m.expiry)}</b></div>
+                <div><span class="text-muted">Nomor HP:</span><br><b>${escapeHtml(m.phone)}</b></div>
+              </div>
+
+              ${!isLocal ? `
+              <div style="margin-bottom:16px;padding:10px;background:${m.ptSessionsLeft > 0 ? '#f8fafc' : '#fff1f2'};border-radius:8px;border:1px solid ${m.ptSessionsLeft > 0 ? '#e2e8f0' : '#fecaca'}">
+                <label style="display:flex;align-items:center;gap:10px;cursor:${m.ptSessionsLeft > 0 ? 'pointer' : 'not-allowed'}; opacity: ${m.ptSessionsLeft > 0 ? '1' : '0.6'}">
+                  <input type="checkbox" id="ci_usePT" style="width:18px;height:18px" ${m.ptSessionsLeft > 0 ? '' : 'disabled'}>
+                  <div>
+                    <span style="font-weight:600;font-size:13px"><i class="fas fa-dumbbell" style="color:#8b5cf6"></i> Gunakan Sesi Personal Trainer</span>
+                    ${m.ptSessionsLeft <= 0 ? '<div style="font-size:10px;color:#ef4444">Sesi PT tidak tersedia atau sudah habis</div>' : ''}
+                  </div>
+                </label>
+              </div>
+              ` : '<div style="text-align:center;padding:10px;color:#94a3b8;font-size:11px">Memuat opsi PT...</div>'}
+              
+              <div style="display:flex;gap:10px">
+                <button id="btnConfirmCheckin" class="btn btn-success" onclick="doCheckinWithPT('${m.memberId || m.id}')" style="flex:1" ${isLocal ? 'disabled' : ''}>
+                  <i class="fas fa-check-circle"></i> ${isLocal ? 'Sedang Memverifikasi...' : 'Konfirmasi Check-In'}
+                </button>
+                <button class="btn btn-secondary" onclick="document.getElementById('checkinPreviewArea').innerHTML=''">
+                  <i class="fas fa-times"></i> Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      // Scroll to preview
+      if (isLocal) previewArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function doCheckin() {
