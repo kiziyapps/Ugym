@@ -139,7 +139,7 @@
       init: function () {
         console.log('🔄 SyncManager Initialized');
         this.lastSync = parseInt(localStorage.getItem('ugym_last_sync') || '0');
-        
+
         // Jalankan sync pertama kali setelah login
         if (currentUser) this.start();
       },
@@ -164,13 +164,13 @@
               console.log('✅ Sync Completed:', res.summary);
               self.lastSync = Date.now();
               localStorage.setItem('ugym_last_sync', self.lastSync.toString());
-              
+
               // Simpan hasil sync ke cache
               if (res.data.products) LocalCache.set('pos_products', res.data.products, 60);
               if (res.data.packages) LocalCache.set('catalogue_packages', res.data.packages, 60);
               if (res.data.stats) LocalCache.set('dashboard_stats', res.data.stats, 30);
               if (res.data.members) LocalCache.set('all_members', res.data.members, 120);
-              
+
               // Trigger event untuk UI yang butuh update
               window.dispatchEvent(new CustomEvent('ugym_sync_complete', { detail: res.data }));
             }
@@ -281,7 +281,10 @@
     /* Login Page Centering */
     .auth-layout {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
       display: flex;
       align-items: center;
@@ -919,7 +922,8 @@
       width: 100%;
       border-collapse: collapse;
       background-color: transparent;
-      min-width: 800px; /* Ensure table doesn't squash columns */
+      min-width: 800px;
+      /* Ensure table doesn't squash columns */
     }
 
     .data-table th {
@@ -944,7 +948,8 @@
 
     .data-table td b {
       display: block;
-      min-width: 150px; /* Min width for names */
+      min-width: 150px;
+      /* Min width for names */
     }
 
     .data-table tr:hover td {
@@ -2417,7 +2422,7 @@
         <!-- Hidden fields with default values for simplified Visit Harian -->
         <input type="hidden" id="visit_name" value="Visitor">
         <input type="hidden" id="visit_phone" value="-">
-        
+
         <div class="form-group">
           <label class="form-label">Tipe Visit *</label>
           <select id="visit_type" class="form-input" onchange="updateVisitPrice()">
@@ -2481,10 +2486,19 @@
     <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
       <div id="authCard" class="auth-card">Memuat Form Login...</div>
       <!-- Developer Branding -->
-      <div class="developer-branding" style="text-align: center; cursor: pointer; opacity: 0.9; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.9'; this.style.transform='scale(1)'">
-        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo" style="width: 80px; height: auto; margin-bottom: 6px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
-        <div style="font-weight: 800; color: #1e293b; font-size: 16px; letter-spacing: 2px; text-align: center; text-transform: uppercase;">KIZIY</div>
-        <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 11px; color: #64748b; margin-top: 2px; text-align: center; letter-spacing: 1px;">key to easy</div>
+      <div class="developer-branding"
+        style="text-align: center; cursor: pointer; opacity: 0.9; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;"
+        onclick="window.open('https://wa.me/6285777723458', '_blank')"
+        onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'"
+        onmouseout="this.style.opacity='0.9'; this.style.transform='scale(1)'">
+        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo"
+          style="width: 80px; height: auto; margin-bottom: 6px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));">
+        <div
+          style="font-weight: 800; color: #1e293b; font-size: 16px; letter-spacing: 2px; text-align: center; text-transform: uppercase;">
+          KIZIY</div>
+        <div
+          style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 11px; color: #64748b; margin-top: 2px; text-align: center; letter-spacing: 1px;">
+          key to easy</div>
       </div>
     </div>
   </div>
@@ -2593,12 +2607,21 @@
         </div>
       </div>
       <div id="contentArea"></div>
-      
+
       <!-- Developer Branding -->
-      <div class="developer-branding" style="text-align: center; padding: 30px 0; margin-top: 40px; border-top: 1px solid var(--border-color); cursor: pointer; opacity: 0.8; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;" onclick="window.open('https://wa.me/6285777723458', '_blank')" onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'" onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">
-        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo" style="width: 100px; height: auto; margin-bottom: 8px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
-        <div style="font-weight: 800; color: var(--text-main); font-size: 18px; letter-spacing: 3px; text-align: center; text-transform: uppercase;">KIZIY</div>
-        <div style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-align: center; letter-spacing: 1.5px;">key to easy</div>
+      <div class="developer-branding"
+        style="text-align: center; padding: 30px 0; margin-top: 40px; border-top: 1px solid var(--border-color); cursor: pointer; opacity: 0.8; transition: all 0.3s ease; display: flex; flex-direction: column; align-items: center;"
+        onclick="window.open('https://wa.me/6285777723458', '_blank')"
+        onmouseover="this.style.opacity='1'; this.style.transform='scale(1.05)'"
+        onmouseout="this.style.opacity='0.8'; this.style.transform='scale(1)'">
+        <img src="https://i.imgur.com/NO5dVfb.png" alt="KIZIY Logo"
+          style="width: 100px; height: auto; margin-bottom: 8px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));">
+        <div
+          style="font-weight: 800; color: var(--text-main); font-size: 18px; letter-spacing: 3px; text-align: center; text-transform: uppercase;">
+          KIZIY</div>
+        <div
+          style="font-family: 'Outfit', sans-serif; font-weight: 500; font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-align: center; letter-spacing: 1.5px;">
+          key to easy</div>
       </div>
     </div>
   </div>
@@ -3112,7 +3135,7 @@
             applyRolePermissions();
             showView('dashboard');
             loadApprovalCount();
-            
+
             // Initialize Background Sync
             SyncManager.init();
           } else {
@@ -3452,21 +3475,21 @@
 
       // Fitness Stats
       if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = s.total || 0;
-            if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
-            if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
-            if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
-            if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
-            if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
-            if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = s.checkins || 0;
-            if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
-            if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(s.revenue || 0);
+      if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
+      if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
+      if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
+      if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
+      if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
+      if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = s.checkins || 0;
+      if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
+      if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(s.revenue || 0);
 
-            // POS Stats
-            if (document.getElementById('statPOSRevenue')) document.getElementById('statPOSRevenue').textContent = formatCurrency(s.posRevenue || 0);
-            if (document.getElementById('statPOSToday')) document.getElementById('statPOSToday').textContent = s.posCount || 0;
-            if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(s.expenses || 0);
+      // POS Stats
+      if (document.getElementById('statPOSRevenue')) document.getElementById('statPOSRevenue').textContent = formatCurrency(s.posRevenue || 0);
+      if (document.getElementById('statPOSToday')) document.getElementById('statPOSToday').textContent = s.posCount || 0;
+      if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(s.expenses || 0);
 
-            if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency(s.fitnessNetProfit || 0);
+      if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency(s.fitnessNetProfit || 0);
       if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency(s.posNetProfit || 0);
       if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(s.netProfit || 0);
 
@@ -3765,11 +3788,11 @@
                   <label class="form-label">Pilih Paket *</label>
                   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
                     ${pkgs.length ? pkgs.filter(p => {
-                      const t = (p.type || '').toLowerCase();
-                      const n = (p.name || '').toLowerCase();
-                      return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
-                             !n.includes('harian') && !n.includes('visit');
-                    }).map(p => `
+            const t = (p.type || '').toLowerCase();
+            const n = (p.name || '').toLowerCase();
+            return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
+              !n.includes('harian') && !n.includes('visit');
+          }).map(p => `
                       <div class="pkg-card" data-id="${p.id}" data-price="${p.price}" data-name="${p.name}" data-dur="${p.duration}" onclick="selectPkg(this)">
                         <div style="font-weight:600;margin-bottom:6px">${escapeHtml(p.name)}</div>
                         <div style="color:#667eea;font-weight:700">${formatCurrency(p.price)}</div>
@@ -4477,11 +4500,11 @@
                     <select id="trx_package" class="form-input">
                       <option value="">-- Pilih Paket --</option>
                       ${pkgs.filter(p => {
-                        const t = (p.type || '').toLowerCase();
-                        const n = (p.name || '').toLowerCase();
-                        return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
-                               !n.includes('harian') && !n.includes('visit');
-                      }).map(p =>
+            const t = (p.type || '').toLowerCase();
+            const n = (p.name || '').toLowerCase();
+            return !t.includes('pt') && !t.includes('trainer') && !t.includes('harian') && !t.includes('visit') &&
+              !n.includes('harian') && !n.includes('visit');
+          }).map(p =>
             `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" data-duration="${p.duration}">${escapeHtml(p.name)} - ${formatCurrency(p.price)} (${escapeHtml(p.duration)})</option>`
           ).join('')}
                     </select>
@@ -6568,11 +6591,11 @@
       // 1. Clear & Show Placeholder
       document.getElementById('checkinResult').innerHTML = '';
       const previewArea = document.getElementById('checkinPreviewArea');
-      
+
       // 2. Try Instant Local Preview from Cache
       const all = LocalCache.get('all_members') || [];
       const localM = all.find(m => (m.memberId || '').toUpperCase() === mid.toUpperCase());
-      
+
       if (localM) {
         console.log('⚡ Showing Instant Local Preview');
         renderCheckinProfile(localM, true);
@@ -6986,20 +7009,20 @@
       typeSelect.innerHTML = '<option value="">-- Memuat Paket... --</option>';
       document.getElementById('visit_name').value = 'Visitor';
       document.getElementById('visit_phone').value = '-';
-      
+
       google.script.run
-        .withSuccessHandler(function(res) {
+        .withSuccessHandler(function (res) {
           if (res && res.success && res.packages) {
             // Filter hanya paket VISIT atau Harian
             const visitPkgs = res.packages.filter(p => {
               const t = (p.type || '').toUpperCase();
               return t === 'VISIT' || t === 'HARIAN' || t.includes('VISIT');
             });
-            
+
             if (visitPkgs.length === 0) {
               typeSelect.innerHTML = '<option value="">Tidak ada paket VISIT aktif</option>';
             } else {
-              typeSelect.innerHTML = visitPkgs.map(p => 
+              typeSelect.innerHTML = visitPkgs.map(p =>
                 `<option value="${p.id}" data-price="${p.price}">${escapeHtml(p.name)} - ${formatCurrency(p.price)}</option>`
               ).join('');
               updateVisitPrice();
@@ -7019,13 +7042,13 @@
       const selectedOption = typeSelect.options[typeSelect.selectedIndex];
       const priceSpan = document.getElementById('visitPriceSpan');
       const totalSpan = document.getElementById('visitTotalSpan');
-      
+
       if (!selectedOption || !selectedOption.value) {
         priceSpan.textContent = 'Rp 0';
         totalSpan.textContent = 'Rp 0';
         return;
       }
-      
+
       const price = parseInt(selectedOption.dataset.price) || 0;
       priceSpan.textContent = formatCurrency(price);
       totalSpan.textContent = formatCurrency(price);
@@ -7140,11 +7163,11 @@
           btn.disabled = false;
           showToast('Error: ' + err.message, 'error');
         })
-        .processVisitCheckIn({ 
-          visitorName: name, 
-          visitorPhone: phone, 
-          visitType: document.getElementById('visit_type').value, 
-          paymentMethod: document.getElementById('visit_payment').value || 'Cash' 
+        .processVisitCheckIn({
+          visitorName: name,
+          visitorPhone: phone,
+          visitType: document.getElementById('visit_type').value,
+          paymentMethod: document.getElementById('visit_payment').value || 'Cash'
         });
     }
 
@@ -8156,11 +8179,11 @@
     }
 
     function fixPackageIds() {
-      showConfirm('Apakah Anda ingin merapikan ID Katalog Paket?\n\nID akan diperbarui berdasarkan tipe (M untuk Member, PT untuk Trainer, V untuk Visit) dan dipastikan unik.', function(ok) {
+      showConfirm('Apakah Anda ingin merapikan ID Katalog Paket?\n\nID akan diperbarui berdasarkan tipe (M untuk Member, PT untuk Trainer, V untuk Visit) dan dipastikan unik.', function (ok) {
         if (!ok) return;
         showLoading();
         google.script.run
-          .withSuccessHandler(function(res) {
+          .withSuccessHandler(function (res) {
             hideLoading();
             if (res.success) {
               showToast('✅ ' + res.message, 'success');
@@ -8905,7 +8928,7 @@
             const cardAktif = document.getElementById('cardMemberAktif');
             if (cardTotal) cardTotal.style.display = 'flex';
             if (cardAktif) cardAktif.style.display = 'flex';
-            
+
             // New Gallery and Birthday cards are also visible
             const cardGallery = document.getElementById('cardGallery');
             const cardBirthday = document.getElementById('cardBirthday');
