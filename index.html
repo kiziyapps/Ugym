@@ -3470,56 +3470,46 @@
             if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(s.expenses || 0);
 
             if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency(s.fitnessNetProfit || 0);
-            if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency(s.posNetProfit || 0);
-            if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(s.netProfit || 0);
+      if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency(s.posNetProfit || 0);
+      if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(s.netProfit || 0);
 
-            // Hide financial stats for Staff & Kasir
-            if (currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
-              const financialStats = ['statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit'];
-              financialStats.forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = '***';
-              });
-            }
+      // Hide financial stats for Staff & Kasir
+      if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
+        const financialStats = ['statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit'];
+        financialStats.forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = '***';
+        });
+      }
 
-            // Low Stock Widget
-            const lsEl = document.getElementById('lowStockWidget');
-            if (lsEl) {
-              if (s.lowStock && s.lowStock.length > 0) {
-                lsEl.innerHTML = `
-                  <div style="display:flex; flex-direction:column; gap:8px">
-                    ${s.lowStock.map(item => {
-                  const isOutOfStock = item.stock <= 0;
-                  return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:${isOutOfStock ? '#fef2f2' : '#fffbeb'}; border-radius:10px; border-left:4px solid ${isOutOfStock ? '#ef4444' : '#f59e0b'}">
-                          <div style="display:flex; flex-direction:column">
-                            <span style="font-size:13px; font-weight:700; color:${isOutOfStock ? '#991b1b' : '#92400e'}">${escapeHtml(item.name)}</span>
-                            <span style="font-size:11px; color:#64748b">ID: ${item.id}</span>
-                          </div>
-                          <span class="badge ${isOutOfStock ? 'badge-danger' : 'badge-warning'}" style="font-size:11px">
-                            ${isOutOfStock ? 'HABIS' : 'Sisa: ' + item.stock} ${item.unit}
-                          </span>
-                        </div>
-                      `;
-                }).join('')}
+      // Low Stock Widget
+      const lsEl = document.getElementById('lowStockWidget');
+      if (lsEl) {
+        if (s.lowStock && s.lowStock.length > 0) {
+          lsEl.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:8px">
+              ${s.lowStock.map(item => {
+            const isOutOfStock = item.stock <= 0;
+            return `
+                  <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:${isOutOfStock ? '#fef2f2' : '#fffbeb'}; border-radius:10px; border-left:4px solid ${isOutOfStock ? '#ef4444' : '#f59e0b'}">
+                    <div style="display:flex; flex-direction:column">
+                      <span style="font-size:13px; font-weight:700; color:${isOutOfStock ? '#991b1b' : '#92400e'}">${escapeHtml(item.name)}</span>
+                      <span style="font-size:11px; color:#64748b">ID: ${item.id}</span>
+                    </div>
+                    <span class="badge ${isOutOfStock ? 'badge-danger' : 'badge-warning'}" style="font-size:11px">
+                      ${isOutOfStock ? 'HABIS' : 'Sisa: ' + item.stock} ${item.unit}
+                    </span>
                   </div>
                 `;
-              } else {
-                lsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#10b981;background:#f0fdf4;border-radius:10px"><i class="fas fa-check-circle"></i> Stok aman & tersedia</div>';
-              }
-            }
+          }).join('')}
+            </div>
+          `;
+        } else {
+          lsEl.innerHTML = '<div style="text-align:center;padding:20px;color:#10b981;background:#f0fdf4;border-radius:10px"><i class="fas fa-check-circle"></i> Stok aman & tersedia</div>';
+        }
+      }
 
-            renderTodayCheckins(s.todayCheckinList || []);
-          } else {
-            console.error('Dashboard data error:', res?.message);
-            showToast('Gagal memuat data dashboard', 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          console.error('Dashboard fetch error:', err);
-          showToast('Gagal memuat data: ' + err.message, 'error');
-        })
-        .getDashboardStats(start, end);
+      renderTodayCheckins(s.todayCheckinList || []);
     }
 
     // printDashboard removed
