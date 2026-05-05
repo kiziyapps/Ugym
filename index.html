@@ -149,6 +149,9 @@
         
         // Cek status awal
         if (!navigator.onLine) this.updateIndicator('offline', 'Offline');
+        
+        // Jalankan proses queue jika ada sisa
+        SyncQueue.process();
       },
 
       start: function () {
@@ -192,12 +195,71 @@
             self.updateIndicator('online', 'Offline?');
           })
           .getSyncData(this.lastSync);
+
+        // Jalankan queue secara berkala
+        if (typeof SyncQueue !== 'undefined') SyncQueue.process();
       },
       updateIndicator: function (status, text) {
         const dot = document.getElementById('syncStatusDot');
         const txt = document.getElementById('syncStatusText');
         if (dot) dot.className = 'status-dot ' + status;
         if (txt) txt.textContent = text;
+      }
+    };
+
+    // ================ SYNC QUEUE FOR OFFLINE ACTIONS ================
+    const SyncQueue = {
+      key: 'ugym_offline_queue',
+      isProcessing: false,
+      add: function (action, args) {
+        const queue = this.get();
+        queue.push({
+          id: 'q_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+          action: action,
+          args: args,
+          timestamp: Date.now()
+        });
+        localStorage.setItem(this.key, JSON.stringify(queue));
+        this.process();
+      },
+      get: function () {
+        return JSON.parse(localStorage.getItem(this.key) || '[]');
+      },
+      remove: function (id) {
+        const queue = this.get().filter(item => item.id !== id);
+        localStorage.setItem(this.key, JSON.stringify(queue));
+      },
+      process: function () {
+        if (!navigator.onLine || this.isProcessing) return;
+        const queue = this.get();
+        if (queue.length === 0) return;
+
+        this.isProcessing = true;
+        console.log('📦 Processing Offline Queue (' + queue.length + ' items)...');
+        if (SyncManager.updateIndicator) SyncManager.updateIndicator('syncing', 'Queue...');
+
+        const promises = queue.map(item => {
+          return new Promise((resolve) => {
+            google.script.run
+              .withSuccessHandler(res => {
+                if (res && res.success) {
+                  this.remove(item.id);
+                  console.log('✅ Queue Item Processed:', item.action);
+                }
+                resolve();
+              })
+              .withFailureHandler(err => {
+                console.warn('❌ Queue Retry Failed:', item.action, err);
+                resolve();
+              })
+              [item.action](...item.args);
+          });
+        });
+
+        Promise.all(promises).then(() => {
+          this.isProcessing = false;
+          if (SyncManager.updateIndicator) SyncManager.updateIndicator('online', 'Online');
+        });
       }
     };
 
@@ -3745,6 +3807,30 @@
     }
 
     // ================ GALLERY ================
+    function checkinMember(memberId) {
+      // Update Local Cache Optimistically
+      LocalCache.update('all_members', (members) => {
+        const idx = members.findIndex(m => m.memberId === memberId);
+        if (idx !== -1) {
+          members[idx].status = 'Aktif'; 
+        }
+        return members;
+      });
+
+      // Add to Sync Queue (Background Processing)
+      SyncQueue.add('processCheckin', [memberId]);
+      
+      showToast('Check-In Berhasil (Antrean)', 'success');
+      
+      // Render Preview local state
+      const localMember = localSearchMember(memberId);
+      if(localMember && localMember.length > 0) {
+        renderCheckinProfile(localMember[0], true); // true = isLocal/pending sync
+      }
+      
+      document.getElementById('checkinId').value = '';
+    }
+
     function loadGalleryView() {
       showLoading();
       google.script.run
@@ -5443,39 +5529,26 @@
           notes: ''
         };
 
-        google.script.run
-          .withSuccessHandler(function (res) {
-            hideLoading();
-            if (res.success) {
-              showToast('Transaksi Berhasil!', 'success');
+        // Optimistic Update Cache
+        LocalCache.update('pos_products', (prods) => {
+          return prods.map(p => {
+            const cartItem = payload.items.find(ci => ci.id === p.id);
+            if (cartItem) return { ...p, stock: Math.max(0, (p.stock || 0) - cartItem.qty) };
+            return p;
+          });
+        });
+        
+        // Refresh Dashboard Cache
+        LocalCache.update('dashboard_stats', (s) => {
+          if (!s) return s;
+          return { ...s, posRevenue: (s.posRevenue || 0) + payload.total, posCount: (s.posCount || 0) + 1 };
+        });
 
-              // Optimistic Update Cache
-              LocalCache.update('pos_products', (prods) => {
-                return prods.map(p => {
-                  const cartItem = payload.items.find(ci => ci.id === p.id);
-                  if (cartItem) return { ...p, stock: Math.max(0, (p.stock || 0) - cartItem.qty) };
-                  return p;
-                });
-              });
-              // Refresh Dashboard Cache
-              LocalCache.update('dashboard_stats', (s) => {
-                return { ...s, posRevenue: (s.posRevenue || 0) + payload.total, posCount: (s.posCount || 0) + 1 };
-              });
-
-              // Print receipt option
-              showConfirm('Transaksi Berhasil! Kirim Struk via WhatsApp?', (waOk) => {
-                if (waOk) {
-                  sendPOSReceiptToWA(res.trxId, payload);
-                }
-                // Reset POS
-                resetPOS();
-              });
-
-            } else {
-              showToast('Gagal: ' + res.message, 'error');
-            }
-          })
-          .processPOSTransaction(payload);
+        // Add to Sync Queue
+        SyncQueue.add('processPOSTransaction', [payload]);
+        
+        showToast('Transaksi Berhasil (Antrean)', 'success');
+        resetPOS();
       });
     }
     function resetPOS() {
