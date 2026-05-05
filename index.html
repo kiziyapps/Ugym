@@ -112,6 +112,15 @@
           return null;
         }
       },
+      update: function (key, updater, ttlMinutes = 60) {
+        const current = this.get(key);
+        if (current) {
+          const newData = updater(JSON.parse(JSON.stringify(current))); // Deep clone
+          this.set(key, newData, ttlMinutes);
+          return newData;
+        }
+        return null;
+      },
       remove: function (key) {
         localStorage.removeItem(this.prefix + key);
       },
@@ -507,18 +516,6 @@
         height: 50px;
         font-size: 20px;
       }
-    }
-
-    border: none;
-    color: white;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
     }
 
     .btn-close-sidebar:hover {
@@ -5376,6 +5373,19 @@
             if (res.success) {
               showToast('Transaksi Berhasil!', 'success');
 
+              // Optimistic Update Cache
+              LocalCache.update('pos_products', (prods) => {
+                return prods.map(p => {
+                  const cartItem = payload.items.find(ci => ci.id === p.id);
+                  if (cartItem) return { ...p, stock: Math.max(0, (p.stock || 0) - cartItem.qty) };
+                  return p;
+                });
+              });
+              // Refresh Dashboard Cache
+              LocalCache.update('dashboard_stats', (s) => {
+                return { ...s, posRevenue: (s.posRevenue || 0) + payload.total, posCount: (s.posCount || 0) + 1 };
+              });
+
               // Print receipt option
               showConfirm('Transaksi Berhasil! Kirim Struk via WhatsApp?', (waOk) => {
                 if (waOk) {
@@ -6855,169 +6865,120 @@
 
       google.script.run
         .withSuccessHandler(function (res) {
-          clearTimeout(timeoutId);
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
 
-          console.log('Check-in response from server:', res);
+          if (res && res.success) {
+            // Optimistic Update Cache
+            LocalCache.update('dashboard_stats', (s) => {
+              return { ...s, checkins: (s.checkins || 0) + 1 };
+            });
+            LocalCache.update('all_members', (members) => {
+              return members.map(m => {
+                if (m.memberId === (res.memberId || mid)) {
+                  let newSessions = m.ptSessionsLeft;
+                  if (usePT) newSessions = Math.max(0, (m.ptSessionsLeft || 0) - 1);
+                  return { ...m, ptSessionsLeft: newSessions };
+                }
+                return m;
+              });
+            });
 
-          const el = document.getElementById('checkinResult');
-          if (!el) return;
-
-          if (res && res.success === true) {
-            document.getElementById('checkinPreviewArea').innerHTML = ''; // Clear preview on success
-            const checkinTime = res.checkinTime ? new Date(res.checkinTime) : new Date();
-            const daysLeft = res.daysLeft || 0;
-            const memberName = res.memberName || mid;
-            const ptUsed = res.ptUsed || false;
-            const remainingPT = res.remainingPTSessions || 0;
-
-            let warningHtml = '';
-            if (res.warning) {
-              warningHtml = `
-                <div style="margin-top:16px;padding:12px;background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;color:#92400e">
-                  <i class="fas fa-exclamation-triangle"></i> ${escapeHtml(res.warning)}
-                </div>
-              `;
-            }
-
-            let ptHtml = '';
-            if (remainingPT > 0) {
-              ptHtml = `
-                <div style="margin-top:12px;padding:10px;background:#f3e8ff;border-left:4px solid #8b5cf6;border-radius:8px;color:#6b21a8">
-                  <i class="fas fa-dumbbell" style="margin-right:8px"></i>
-                  <b>${ptUsed ? 'PT Digunakan' : 'PT Tersedia'}</b>: 
-                  <span style="font-size:16px;font-weight:700">${remainingPT}</span> sesi tersisa
-                </div>
-              `;
-            }
-
-            el.innerHTML = `
-              <div class="checkin-success-card">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-                  <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                    <i class="fas fa-check"></i>
-                  </div>
-                  <div>
-                    <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Check-In Berhasil')}</h3>
-                    <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
-                  </div>
-                </div>
-                
-                <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                  <div style="font-size:16px;margin-bottom:8px"><b>${escapeHtml(memberName)}</b></div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px">
-                    <div>
-                      <span style="color:#64748b">ID Member</span><br>
-                      <code style="background:#f1f5f9;padding:4px 8px;border-radius:4px">${escapeHtml(res.memberId || mid)}</code>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Paket</span><br>
-                      <b>${escapeHtml(res.currentPackage || '-')}</b>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Berlaku s/d</span><br>
-                      <b>${formatDate(res.expiryDate)}</b>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Sisa Hari</span><br>
-                      <b style="color:${daysLeft <= 7 ? '#f59e0b' : '#22c55e'};font-size:18px">${daysLeft} hari</b>
-                    </div>
-                  </div>
-                </div>
-                
-                ${ptHtml}
-                ${warningHtml}
-                
-                <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
-                  <div>
-                    <span class="badge badge-${ptUsed ? 'success' : 'warning'}">
-                      ${ptUsed ? '✓ Menggunakan PT' : '✗ Tidak menggunakan PT'}
-                    </span>
-                  </div>
-                  <div style="color:#64748b;font-size:12px">
-                    <i class="far fa-clock"></i> Check-in: ${formatTime(checkinTime)}
-                  </div>
-                </div>
-              </div>
-            `;
-
-            document.getElementById('ci_memberId').value = '';
+            document.getElementById('checkinPreviewArea').innerHTML = '';
+            showCheckinSuccess(res, mid);
             loadTodayCheckins();
           } else {
-            const errorType = res?.type || 'error';
-            const errorMessage = res?.message || 'Check-In Gagal';
-            const errorDetails = res?.details || '';
-            const memberInfo = res?.memberName ? `Member: ${res.memberName}` : '';
-
-            let bgColor, borderColor, iconColor, icon;
-            if (errorType === 'already_checked_in') {
-              bgColor = '#fef3c7';
-              borderColor = '#f59e0b';
-              iconColor = '#f59e0b';
-              icon = 'fa-clock';
-            } else if (errorType === 'inactive' || errorType === 'expired') {
-              bgColor = '#fee2e2';
-              borderColor = '#ef4444';
-              iconColor = '#ef4444';
-              icon = 'fa-user-slash';
-            } else {
-              bgColor = '#fee2e2';
-              borderColor = '#ef4444';
-              iconColor = '#ef4444';
-              icon = 'fa-times-circle';
-            }
-
-            el.innerHTML = `
-              <div class="checkin-error-card" style="background:${bgColor};border-left:6px solid ${borderColor};border-radius:12px;padding:20px;margin-bottom:20px">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                  <div style="background:${iconColor};color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                    <i class="fas ${icon}"></i>
-                  </div>
-                  <div>
-                    <h3 style="color:#991b1b;margin:0 0 4px 0">❌ ${escapeHtml(errorMessage)}</h3>
-                    <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                  </div>
-                </div>
-                
-                <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                  <p style="margin:0 0 8px 0"><i class="fas fa-info-circle" style="color:#64748b"></i> ${escapeHtml(errorDetails)}</p>
-                  ${memberInfo ? `<p style="margin:0"><i class="fas fa-user" style="color:#64748b"></i> ${escapeHtml(memberInfo)}</p>` : ''}
-                </div>
-                
-                ${errorType === 'inactive' || errorType === 'expired' ? `
-                  <div style="margin-top:12px">
-                    <button class="btn btn-warning btn-sm" onclick="showView('transactions')">
-                      <i class="fas fa-sync-alt"></i> Perpanjang Sekarang
-                    </button>
-                  </div>
-                ` : ''}
-              </div>
-            `;
+            showCheckinError(res);
           }
         })
         .withFailureHandler(function (err) {
-          clearTimeout(timeoutId);
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-
-          const el = document.getElementById('checkinResult');
-          if (el) {
-            el.innerHTML = `
-              <div class="checkin-error-card" style="background:#fee2e2;border-left:6px solid #ef4444;border-radius:12px;padding:20px">
-                <h3 style="color:#991b1b">❌ Error Sistem</h3>
-                <p style="margin-top:8px">${escapeHtml(err.message)}</p>
-              </div>
-            `;
-          }
-          showToast('Error: ' + err.message, 'error');
+          showCheckinError({ message: err.message });
         })
-        .processCheckInWithPT({
-          memberId: mid,
-          usePT: usePT
-        }, currentUser?.name || 'Admin');
+        .processCheckInWithPT({ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin');
+    }
+
+    function showCheckinSuccess(res, mid) {
+      const el = document.getElementById('checkinResult');
+      if (!el) return;
+      const checkinTime = res.checkinTime ? new Date(res.checkinTime) : new Date();
+      const daysLeft = res.daysLeft || 0;
+      const memberName = res.memberName || mid;
+      const ptUsed = res.ptUsed || false;
+      const remainingPT = res.remainingPTSessions || 0;
+
+      let warningHtml = '';
+      if (res.warning) {
+        warningHtml = `<div style="margin-top:16px;padding:12px;background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;color:#92400e"><i class="fas fa-exclamation-triangle"></i> ${escapeHtml(res.warning)}</div>`;
+      }
+
+      let ptHtml = '';
+      if (remainingPT > 0) {
+        ptHtml = `<div style="margin-top:12px;padding:10px;background:#f3e8ff;border-left:4px solid #8b5cf6;border-radius:8px;color:#6b21a8"><i class="fas fa-dumbbell" style="margin-right:8px"></i> <b>${ptUsed ? 'PT Digunakan' : 'PT Tersedia'}</b>: <span style="font-size:16px;font-weight:700">${remainingPT}</span> sesi tersisa</div>`;
+      }
+
+      el.innerHTML = `
+        <div class="checkin-success-card">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+            <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px"><i class="fas fa-check"></i></div>
+            <div>
+              <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Check-In Berhasil')}</h3>
+              <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
+            </div>
+          </div>
+          <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
+            <div style="font-size:16px;margin-bottom:8px"><b>${escapeHtml(memberName)}</b></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px">
+              <div><span style="color:#64748b">ID Member</span><br><code style="background:#f1f5f9;padding:4px 8px;border-radius:4px">${escapeHtml(res.memberId || mid)}</code></div>
+              <div><span style="color:#64748b">Paket</span><br><b>${escapeHtml(res.currentPackage || '-')}</b></div>
+              <div><span style="color:#64748b">Berlaku s/d</span><br><b>${formatDate(res.expiryDate)}</b></div>
+              <div><span style="color:#64748b">Sisa Hari</span><br><b style="color:${daysLeft <= 7 ? '#f59e0b' : '#22c55e'};font-size:18px">${daysLeft} hari</b></div>
+            </div>
+          </div>
+          ${ptHtml} ${warningHtml}
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
+            <div><span class="badge badge-${ptUsed ? 'success' : 'warning'}">${ptUsed ? '✓ Menggunakan PT' : '✗ Tidak menggunakan PT'}</span></div>
+            <div style="color:#64748b;font-size:12px"><i class="far fa-clock"></i> Check-in: ${formatTime(checkinTime)}</div>
+          </div>
+        </div>
+      `;
+      document.getElementById('ci_memberId').value = '';
+    }
+
+    function showCheckinError(res) {
+      const el = document.getElementById('checkinResult');
+      if (!el) return;
+      const errorType = res?.type || 'error';
+      const errorMessage = res?.message || 'Check-In Gagal';
+      const errorDetails = res?.details || '';
+      const memberInfo = res?.memberName ? `Member: ${res.memberName}` : '';
+
+      let bgColor = '#fee2e2', borderColor = '#ef4444', iconColor = '#ef4444', icon = 'fa-times-circle';
+      if (errorType === 'already_checked_in') {
+        bgColor = '#fef3c7'; borderColor = '#f59e0b'; iconColor = '#f59e0b'; icon = 'fa-clock';
+      } else if (errorType === 'inactive' || errorType === 'expired') {
+        bgColor = '#fee2e2'; borderColor = '#ef4444'; iconColor = '#ef4444'; icon = 'fa-user-slash';
+      }
+
+      el.innerHTML = `
+        <div class="checkin-error-card" style="background:${bgColor};border-left:6px solid ${borderColor};border-radius:12px;padding:20px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+            <div style="background:${iconColor};color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px"><i class="fas ${icon}"></i></div>
+            <div>
+              <h3 style="color:#991b1b;margin:0 0 4px 0">❌ ${escapeHtml(errorMessage)}</h3>
+              <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
+            </div>
+          </div>
+          <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
+            <p style="margin:0 0 8px 0"><i class="fas fa-info-circle" style="color:#64748b"></i> ${escapeHtml(errorDetails)}</p>
+            ${memberInfo ? `<p style="margin:0"><i class="fas fa-user" style="color:#64748b"></i> ${escapeHtml(memberInfo)}</p>` : ''}
+          </div>
+          ${errorType === 'inactive' || errorType === 'expired' ? `<div style="margin-top:12px"><button class="btn btn-warning btn-sm" onclick="showView('transactions')"><i class="fas fa-sync-alt"></i> Perpanjang Sekarang</button></div>` : ''}
+        </div>
+      `;
     }
 
     function openVisitModal() {
