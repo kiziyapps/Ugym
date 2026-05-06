@@ -220,7 +220,8 @@
           timestamp: Date.now()
         });
         localStorage.setItem(this.key, JSON.stringify(queue));
-        this.process();
+        // Process in background, don't let it block current execution
+        setTimeout(() => this.process(), 10);
       },
       get: function () {
         return JSON.parse(localStorage.getItem(this.key) || '[]');
@@ -238,28 +239,31 @@
         console.log('📦 Processing Offline Queue (' + queue.length + ' items)...');
         if (SyncManager.updateIndicator) SyncManager.updateIndicator('syncing', 'Queue...');
 
-        const promises = queue.map(item => {
-          return new Promise((resolve) => {
-            google.script.run
-              .withSuccessHandler(res => {
-                if (res && res.success) {
-                  this.remove(item.id);
-                  console.log('✅ Queue Item Processed:', item.action);
-                }
-                resolve();
-              })
-              .withFailureHandler(err => {
-                console.warn('❌ Queue Retry Failed:', item.action, err);
-                resolve();
-              })
-              [item.action](...item.args);
-          });
-        });
+        // Process one by one to avoid overwhelming the server/browser
+        const processNext = (index) => {
+          if (index >= queue.length) {
+            this.isProcessing = false;
+            if (SyncManager.updateIndicator) SyncManager.updateIndicator('online', 'Online');
+            return;
+          }
 
-        Promise.all(promises).then(() => {
-          this.isProcessing = false;
-          if (SyncManager.updateIndicator) SyncManager.updateIndicator('online', 'Online');
-        });
+          const item = queue[index];
+          google.script.run
+            .withSuccessHandler(res => {
+              if (res && res.success) {
+                this.remove(item.id);
+                console.log('✅ Queue Item Processed:', item.action);
+              }
+              processNext(index + 1);
+            })
+            .withFailureHandler(err => {
+              console.warn('❌ Queue Retry Failed:', item.action, err);
+              processNext(index + 1);
+            })
+            [item.action](...item.args);
+        };
+
+        processNext(0);
       }
     };
 
@@ -5117,8 +5121,8 @@
 
     function loadPOSView() {
       document.getElementById('contentArea').innerHTML = `
-        <div class="pos-container" style="grid-template-columns: 1fr;">
-          <div class="pos-left-area" style="display:flex; flex-direction:column; gap:24px; max-width: 1200px; margin: 0 auto; width: 100%;">
+        <div class="pos-container">
+          <div class="pos-left-area">
             <div id="posMainArea" class="pos-products">
               <div class="pos-header">
                 <div class="form-group" style="flex:1; margin-bottom:0">
@@ -5154,70 +5158,6 @@
                <!-- Riwayat Transaksi POS akan muncul di sini -->
             </div>
 
-            <!-- CART MOVED HERE -->
-            <div class="pos-cart" style="height:auto; min-height:400px">
-              <div class="cart-header">
-                <h4 style="margin:0"><i class="fas fa-shopping-basket"></i> Keranjang Belanja</h4>
-                <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#ef4444" onclick="clearCart()">
-                  <i class="fas fa-trash"></i> Kosongkan
-                </button>
-              </div>
-              <div id="cartItems" class="cart-items" style="max-height:400px">
-                <div class="empty-cart">
-                  <i class="fas fa-shopping-cart fa-3x" style="margin-bottom:16px; opacity:0.3"></i>
-                  <p>Keranjang masih kosong</p>
-                </div>
-              </div>
-              <div class="cart-footer">
-                <div class="form-row" style="margin-bottom:0">
-                  <div class="form-group">
-                    <label class="form-label">Member / Customer</label>
-                    <div style="position:relative">
-                      <input type="text" id="pos_memberId" class="form-input" placeholder="Cari Nama/ID/HP..." oninput="searchMemberForPOS(this.value)">
-                      <div id="posMemberResults" class="search-dropdown"></div>
-                    </div>
-                    <div id="pos_memberInfo" style="margin-top:8px; font-size:12px; color:#64748b">Guest Customer</div>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">WhatsApp Customer</label>
-                    <input type="text" id="pos_wa_number" class="form-input" placeholder="08xxxxxxxxxx">
-                  </div>
-                </div>
-                
-                <div class="cart-summary">
-                  <div class="cart-summary-row">
-                    <span>Subtotal</span>
-                    <span id="pos_subtotal">Rp 0</span>
-                  </div>
-                  <div class="cart-summary-row" style="align-items:center">
-                    <span>Diskon (%)</span>
-                    <input type="number" id="pos_discount" class="form-input" style="width:80px; padding:6px 12px; font-size:14px; margin:0" value="0" oninput="updateCartUI()">
-                  </div>
-                  <div class="cart-total">
-                    <div class="cart-summary-row" style="margin-bottom:0">
-                      <span>Total Bayar</span>
-                      <span id="pos_total" style="font-size:24px; color:var(--primary)">Rp 0</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div style="display:flex; gap:16px; margin-top:20px; align-items:flex-end">
-                  <div class="form-group" style="flex:1; margin-bottom:0">
-                    <label class="form-label">Metode Pembayaran</label>
-                    <select id="pos_payment" class="form-input">
-                      <option value="Tunai">Tunai / Cash</option>
-                      <option value="Transfer">Transfer Bank</option>
-                      <option value="QRIS">QRIS</option>
-                      <option value="Kartu">Debit / Kredit</option>
-                    </select>
-                  </div>
-                  <button class="btn btn-primary" style="flex:1.5; height:50px; font-size:16px" onclick="checkoutPOS()">
-                    <i class="fas fa-cash-register"></i> BAYAR SEKARANG
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <div class="form-card" style="margin-top:0">
               <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
                 <h4 style="margin:0"><i class="fas fa-clock"></i> Transaksi Terakhir</h4>
@@ -5229,6 +5169,69 @@
                 <div style="text-align:center; padding:30px; color:#94a3b8">
                   <i class="fas fa-spinner fa-spin"></i>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pos-cart">
+            <div class="cart-header">
+              <h4 style="margin:0"><i class="fas fa-shopping-basket"></i> Keranjang Belanja</h4>
+              <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#ef4444" onclick="clearCart()">
+                <i class="fas fa-trash"></i> Kosongkan
+              </button>
+            </div>
+            <div id="cartItems" class="cart-items" style="max-height:450px; overflow-y:auto">
+              <div class="empty-cart">
+                <i class="fas fa-shopping-cart fa-3x" style="margin-bottom:16px; opacity:0.3"></i>
+                <p>Keranjang masih kosong</p>
+              </div>
+            </div>
+            <div class="cart-footer">
+              <div class="form-row" style="margin-bottom:15px; grid-template-columns: 1fr;">
+                <div class="form-group" style="margin-bottom:10px">
+                  <label class="form-label">Member / Customer</label>
+                  <div style="position:relative">
+                    <input type="text" id="pos_memberId" class="form-input" placeholder="Cari Nama/ID/HP..." oninput="searchMemberForPOS(this.value)">
+                    <div id="posMemberResults" class="search-dropdown"></div>
+                  </div>
+                  <div id="pos_memberInfo" style="margin-top:4px; font-size:12px; color:#64748b">Guest Customer</div>
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">WhatsApp Customer</label>
+                  <input type="text" id="pos_wa_number" class="form-input" placeholder="08xxxxxxxxxx">
+                </div>
+              </div>
+              
+              <div class="cart-summary">
+                <div class="cart-summary-row">
+                  <span>Subtotal</span>
+                  <span id="pos_subtotal">Rp 0</span>
+                </div>
+                <div class="cart-summary-row" style="align-items:center">
+                  <span>Diskon (%)</span>
+                  <input type="number" id="pos_discount" class="form-input" style="width:70px; padding:4px 8px; font-size:14px; margin:0" value="0" oninput="updateCartUI()">
+                </div>
+                <div class="cart-total">
+                  <div class="cart-summary-row" style="margin-bottom:0">
+                    <span>Total Bayar</span>
+                    <span id="pos_total" style="font-size:22px; color:var(--primary)">Rp 0</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div style="display:flex; flex-direction:column; gap:12px; margin-top:15px">
+                <div class="form-group" style="margin-bottom:0">
+                  <label class="form-label">Metode Pembayaran</label>
+                  <select id="pos_payment" class="form-input" style="padding:10px">
+                    <option value="Tunai">Tunai / Cash</option>
+                    <option value="Transfer">Transfer Bank</option>
+                    <option value="QRIS">QRIS</option>
+                    <option value="Kartu">Debit / Kredit</option>
+                  </select>
+                </div>
+                <button class="btn btn-primary" style="width:100%; height:50px; font-size:16px" onclick="checkoutPOS()">
+                  <i class="fas fa-cash-register"></i> BAYAR SEKARANG
+                </button>
               </div>
             </div>
           </div>
@@ -5370,22 +5373,26 @@
       filterPOSProducts();
     }
 
+    let filterTimeout;
     function filterPOSProducts() {
-      const query = document.getElementById('posSearch')?.value.toLowerCase() || '';
-      let filtered = posProducts;
+      clearTimeout(filterTimeout);
+      filterTimeout = setTimeout(() => {
+        const query = document.getElementById('posSearch')?.value.toLowerCase() || '';
+        let filtered = posProducts;
 
-      if (selectedCategory !== 'All') {
-        filtered = filtered.filter(p => p.category === selectedCategory);
-      }
+        if (selectedCategory !== 'All') {
+          filtered = filtered.filter(p => p.category === selectedCategory);
+        }
 
-      if (query) {
-        filtered = filtered.filter(p =>
-          p.name.toLowerCase().includes(query) ||
-          (p.barcode && p.barcode.toString().includes(query))
-        );
-      }
+        if (query) {
+          filtered = filtered.filter(p =>
+            p.name.toLowerCase().includes(query) ||
+            (p.barcode && p.barcode.toString().includes(query))
+          );
+        }
 
-      renderPOSProducts(filtered);
+        renderPOSProducts(filtered);
+      }, 200); // 200ms debounce
     }
 
     function addToCart(prodId) {
@@ -5529,13 +5536,16 @@
           notes: ''
         };
 
-        // Optimistic Update Cache
+        // Optimistic Update Cache & Local State
         LocalCache.update('pos_products', (prods) => {
-          return prods.map(p => {
+          const updated = prods.map(p => {
             const cartItem = payload.items.find(ci => ci.id === p.id);
             if (cartItem) return { ...p, stock: Math.max(0, (p.stock || 0) - cartItem.qty) };
             return p;
           });
+          posProducts = updated; // Update local variable
+          renderPOSProducts();    // Re-render product grid
+          return updated;
         });
         
         // Refresh Dashboard Cache
@@ -5547,6 +5557,7 @@
         // Add to Sync Queue
         SyncQueue.add('processPOSTransaction', [payload]);
         
+        hideLoading();
         showToast('Transaksi Berhasil (Antrean)', 'success');
         resetPOS();
       });
