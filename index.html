@@ -5847,7 +5847,7 @@
               <label class="form-label" style="text-align:left">Cari Nama atau ID Produk</label>
               <div style="position:relative">
                 <i class="fas fa-search" style="position:absolute; left:12px; top:12px; color:#94a3b8"></i>
-                <input type="text" id="opnameSearch" class="form-input" style="padding-left:36px" placeholder="Ketik nama produk..." oninput="searchProductForOpname(this.value)">
+                <input type="text" id="opnameSearch" class="form-input" style="padding-left:36px" placeholder="Ketik nama produk..." oninput="searchProductForOpname(this.value)" onfocus="ensureProductsLoaded()">
               </div>
               <!-- Floating search results -->
               <div id="opnameSearchResults" class="search-dropdown" style="display:none"></div>
@@ -5922,6 +5922,14 @@
       resultsEl.style.display = 'block';
     }
 
+    function ensureProductsLoaded() {
+      if (!posProducts || posProducts.length === 0) {
+        if (typeof loadPOSProducts === 'function') {
+          loadPOSProducts();
+        }
+      }
+    }
+
     function selectProductForOpname(id) {
       document.getElementById('opnameSearchResults').style.display = 'none';
       document.getElementById('opnameSearch').value = '';
@@ -5959,6 +5967,10 @@
                 openQuickUpdateModal(mapped);
               }
             }
+          })
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal memuat produk: ' + err.message, 'error');
           })
           .getFullProducts();
       }
@@ -6094,6 +6106,10 @@
             showToast('❌ ' + res.message, 'error');
           }
         })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Gagal update: ' + err.message, 'error');
+        })
         .updateInventoryByBarcode(barcode, stock, price);
     }
 
@@ -6136,6 +6152,10 @@
             showToast('❌ ' + res.message, 'error');
           }
         })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Gagal restock: ' + err.message, 'error');
+        })
         .processRestock(payload);
     }
 
@@ -6153,7 +6173,11 @@
               showToast('❌ ' + res.message, 'error');
             }
           })
-          .deletePackage(id);
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal menghapus: ' + err.message, 'error');
+          })
+          .deletePackage(id, currentUser ? currentUser.name : 'Admin');
       });
     }
 
@@ -6171,7 +6195,11 @@
               showToast('❌ ' + res.message, 'error');
             }
           })
-          .deleteProduct(id);
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal menghapus: ' + err.message, 'error');
+          })
+          .deleteProduct(id, currentUser ? currentUser.name : 'Admin');
       });
     }
 
@@ -6205,6 +6233,10 @@
           } else {
             showToast('❌ ' + res.message, 'error');
           }
+        })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Gagal penyesuaian: ' + err.message, 'error');
         })
         .adjustStock(payload);
     }
@@ -6243,6 +6275,10 @@
               document.getElementById('pkg_desc').value = p['Deskripsi'];
               document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE';
             }
+          })
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal memuat detail paket: ' + err.message, 'error');
           })
           .getFullCatalogue();
       } else {
@@ -6286,6 +6322,10 @@
             closePackageModal();
             loadPackageList();
           }
+        })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Gagal menyimpan paket: ' + err.message, 'error');
         })
         .savePackage(data);
     }
