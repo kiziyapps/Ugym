@@ -7100,163 +7100,49 @@
       btn.disabled = true;
       showLoading();
 
-      const timeoutId = setTimeout(() => {
-        hideLoading();
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        showToast('Request timeout. Silakan coba lagi.', 'error');
-      }, 30000);
+      // OPTIMISTIC UI: Tampilkan hasil dari cache lokal dulu supaya cepat
+      try {
+        const allMembers = LocalCache.get('all_members') || [];
+        const localM = allMembers.find(m => m.memberId === mid || m.id === mid);
+        
+        if (localM) {
+          OptimisticUI.addCheckin(localM);
+          showCheckinSuccess({
+            success: true,
+            message: 'Check-In Berhasil (Local)',
+            memberName: localM.name,
+            memberId: localM.memberId,
+            currentPackage: localM.package,
+            expiryDate: localM.expiry,
+            daysLeft: Math.max(0, Math.ceil((new Date(localM.expiry) - new Date()) / (1000 * 60 * 60 * 24))),
+            checkinTime: new Date().toISOString()
+          }, mid);
+          document.getElementById('ci_memberId').value = '';
+        }
+      } catch (e) {
+        console.warn('Optimistic UI failed:', e);
+      }
 
       google.script.run
         .withSuccessHandler(function (res) {
-          clearTimeout(timeoutId);
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
 
-          console.log('Check-in response from server:', res);
-
-          const el = document.getElementById('checkinResult');
-          if (!el) return;
-
-          if (res && res.success === true) {
-            const checkinTime = res.checkinTime ? new Date(res.checkinTime) : new Date();
-            const daysLeft = res.daysLeft || 0;
-            const memberName = res.memberName || mid;
-
-            let warningHtml = '';
-            if (res.warning) {
-              warningHtml = `
-                <div style="margin-top:16px;padding:12px;background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;color:#92400e">
-                  <i class="fas fa-exclamation-triangle"></i> ${escapeHtml(res.warning)}
-                </div>
-              `;
-            }
-
-            let ptHtml = '';
-            if (res.remainingPTSessions > 0) {
-              ptHtml = `<div style="margin-top:8px"><i class="fas fa-dumbbell" style="color:#8b5cf6"></i> Sesi PT tersisa: <b>${res.remainingPTSessions}</b></div>`;
-            }
-
-            el.innerHTML = `
-              <div class="checkin-success-card">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-                  <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                    <i class="fas fa-check"></i>
-                  </div>
-                  <div>
-                    <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Check-In Berhasil')}</h3>
-                    <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
-                  </div>
-                </div>
-                
-                <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                  <div style="font-size:16px;margin-bottom:8px"><b>${escapeHtml(memberName)}</b></div>
-                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px">
-                    <div>
-                      <span style="color:#64748b">ID Member</span><br>
-                      <code style="background:#f1f5f9;padding:4px 8px;border-radius:4px">${escapeHtml(res.memberId || mid)}</code>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Paket</span><br>
-                      <b>${escapeHtml(res.currentPackage || '-')}</b>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Berlaku s/d</span><br>
-                      <b>${formatDate(res.expiryDate)}</b>
-                    </div>
-                    <div>
-                      <span style="color:#64748b">Sisa Hari</span><br>
-                      <b style="color:${daysLeft <= 7 ? '#f59e0b' : '#22c55e'};font-size:18px">${daysLeft} hari</b>
-                    </div>
-                  </div>
-                  ${ptHtml}
-                </div>
-                
-                ${warningHtml}
-                
-                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
-                  <button class="btn btn-success btn-sm" onclick="printMemberCard('${res.memberId || mid}')">
-                    <i class="fas fa-id-card"></i> Cetak Kartu
-                  </button>
-                </div>
-                
-                <div style="margin-top:12px;text-align:right;color:#64748b;font-size:12px">
-                  <i class="far fa-clock"></i> Check-in: ${formatTime(checkinTime)}
-                </div>
-              </div>
-            `;
-
+          if (res && res.success) {
+            showCheckinSuccess(res, mid);
             document.getElementById('ci_memberId').value = '';
             loadTodayCheckins();
           } else {
-            const errorType = res?.type || 'error';
-            const errorMessage = res?.message || 'Check-In Gagal';
-            const errorDetails = res?.details || '';
-            const memberInfo = res?.memberName ? `Member: ${res.memberName}` : '';
-
-            let bgColor, borderColor, iconColor, icon;
-            if (errorType === 'already_checked_in') {
-              bgColor = '#fef3c7';
-              borderColor = '#f59e0b';
-              iconColor = '#f59e0b';
-              icon = 'fa-clock';
-            } else if (errorType === 'inactive' || errorType === 'expired') {
-              bgColor = '#fee2e2';
-              borderColor = '#ef4444';
-              iconColor = '#ef4444';
-              icon = 'fa-user-slash';
-            } else {
-              bgColor = '#fee2e2';
-              borderColor = '#ef4444';
-              iconColor = '#ef4444';
-              icon = 'fa-times-circle';
-            }
-
-            el.innerHTML = `
-              <div class="checkin-error-card" style="background:${bgColor};border-left:6px solid ${borderColor};border-radius:12px;padding:20px;margin-bottom:20px">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                  <div style="background:${iconColor};color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                    <i class="fas ${icon}"></i>
-                  </div>
-                  <div>
-                    <h3 style="color:#991b1b;margin:0 0 4px 0">❌ ${escapeHtml(errorMessage)}</h3>
-                    <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                  </div>
-                </div>
-                
-                <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                  <p style="margin:0 0 8px 0"><i class="fas fa-info-circle" style="color:#64748b"></i> ${escapeHtml(errorDetails)}</p>
-                  ${memberInfo ? `<p style="margin:0"><i class="fas fa-user" style="color:#64748b"></i> ${escapeHtml(memberInfo)}</p>` : ''}
-                </div>
-                
-                ${errorType === 'inactive' || errorType === 'expired' ? `
-                  <div style="margin-top:12px">
-                    <button class="btn btn-warning btn-sm" onclick="showView('transactions')">
-                      <i class="fas fa-sync-alt"></i> Perpanjang Sekarang
-                    </button>
-                  </div>
-                ` : ''}
-              </div>
-            `;
-
+            OptimisticUI.removeCheckin(mid);
+            showCheckinError(res, mid);
           }
         })
         .withFailureHandler(function (err) {
-          clearTimeout(timeoutId);
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-
-          const el = document.getElementById('checkinResult');
-          if (el) {
-            el.innerHTML = `
-              <div class="checkin-error-card" style="background:#fee2e2;border-left:6px solid #ef4444;border-radius:12px;padding:20px">
-                <h3 style="color:#991b1b">❌ Error Sistem</h3>
-                <p style="margin-top:8px">${escapeHtml(err.message)}</p>
-              </div>
-            `;
-          }
+          OptimisticUI.removeCheckin(mid);
           showToast('Error: ' + err.message, 'error');
         })
         .processCheckIn({ memberId: mid }, currentUser?.name || 'Admin');
@@ -7298,8 +7184,12 @@
               return { ...s, checkins: (s.checkins || 0) + 1 };
             });
             
+            // Find member data for UI display
+            const allMembers = LocalCache.get('all_members') || [];
+            const localM = allMembers.find(m => m.memberId === mid || m.id === mid) || res.member;
+            
             // Add to table instantly
-            OptimisticUI.addCheckin(localM || res.member);
+            OptimisticUI.addCheckin(localM);
 
             LocalCache.update('all_members', (members) => {
               return members.map(m => {
@@ -8377,19 +8267,43 @@
                       </div>
                     ` : ''}
                   </div>
+
+                  <!-- Date Overrides -->
+                  <div style="margin:12px 0; display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                    <div class="form-group" style="margin:0">
+                      <label style="font-size:11px; font-weight:600; color:#64748b">TANGGAL PEMBAYARAN</label>
+                      <input type="date" id="payDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                      <label style="font-size:11px; font-weight:600; color:#64748b">TANGGAL MULAI AKTIF</label>
+                      <input type="date" id="startDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                  </div>
                   
                   ${data.proofUrl ? `
                     <div style="margin:12px 0">
-                      <a href="${escapeHtml(data.proofUrl)}" target="_blank" class="btn btn-sm btn-outline">
+                      <a href="${escapeHtml(data.proofUrl)}" target="_blank" class="btn btn-sm btn-outline" style="font-size:11px">
                         <i class="fas fa-image"></i> Lihat Bukti Bayar
                       </a>
                     </div>
                   ` : ''}
                   
-                  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-                    <button class="btn btn-success btn-sm" onclick="approveRequest('${escapeHtml(a.approvalId)}','${escapeHtml(a.type)}')">
-                      <i class="fas fa-check"></i> Approve
-                    </button>
+                  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+                    ${a.status === 'Paid' ? `
+                      <span class="badge badge-success" style="padding:8px 12px; font-size:11px">
+                        <i class="fas fa-money-bill-wave"></i> Pembayaran OK
+                      </span>
+                      <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
+                        <i class="fas fa-user-check"></i> Aktivasi Member
+                      </button>
+                    ` : `
+                      <button class="btn btn-info btn-sm" onclick="approvePayment('${escapeHtml(a.approvalId)}')">
+                        <i class="fas fa-credit-card"></i> Approve Bayar
+                      </button>
+                      <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
+                        <i class="fas fa-check"></i> Aktivasi Member
+                      </button>
+                    `}
                     <button class="btn btn-danger btn-sm" onclick="rejectRequest('${escapeHtml(a.approvalId)}')">
                       <i class="fas fa-times"></i> Reject
                     </button>
@@ -8402,24 +8316,22 @@
       `;
     }
 
-    function approveRequest(id, type) {
+    function approvePayment(id) {
+      const payDate = document.getElementById(`payDate_${id}`)?.value || '';
       showConfirm(
-        `APPROVE PERMINTAAN\n\n` +
+        `APPROVE PEMBAYARAN\n\n` +
         `ID    : ${id}\n` +
-        `Tipe  : ${type === 'Registration' ? 'Registrasi Baru' : 'Perpanjangan'}\n\n` +
-        `Setelah di-approve, member akan langsung aktif dan mendapat email konfirmasi.\n\n` +
+        `Tanggal Pembayaran: ${payDate}\n\n` +
+        `Transaksi akan dicatat dalam laporan keuangan hari ini (dengan tanggal bayar ${payDate}).\n\n` +
         `Lanjutkan?`,
         function (ok) {
           if (!ok) return;
           showLoading();
-
-          const fn = (type === 'Registration') ? 'approveRegistration' : 'approveExtension';
-
           google.script.run
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res && res.success) {
-                showToast('✅ Berhasil di-approve!', 'success');
+                showToast('✅ Pembayaran berhasil di-approve!', 'success');
                 loadApprovals();
                 loadApprovalCount();
               } else {
@@ -8430,7 +8342,38 @@
               hideLoading();
               showToast('Error: ' + err.message, 'error');
             })
-          [fn](id, currentUser?.name || 'Admin');
+            .approvePaymentOnly(id, currentUser?.name || 'Admin', payDate);
+        }
+      );
+    }
+
+    function approveActivation(id) {
+      const startDate = document.getElementById(`startDate_${id}`)?.value || '';
+      showConfirm(
+        `APPROVE AKTIVASI MEMBER\n\n` +
+        `ID    : ${id}\n` +
+        `Tanggal Mulai Aktif: ${startDate}\n\n` +
+        `Masa aktif member akan dihitung mulai ${startDate}.\n\n` +
+        `Lanjutkan?`,
+        function (ok) {
+          if (!ok) return;
+          showLoading();
+          google.script.run
+            .withSuccessHandler(function (res) {
+              hideLoading();
+              if (res && res.success) {
+                showToast('✅ Member berhasil diaktivasi!', 'success');
+                loadApprovals();
+                loadApprovalCount();
+              } else {
+                showToast('❌ ' + (res?.message || 'Gagal aktivasi'), 'error');
+              }
+            })
+            .withFailureHandler(function (err) {
+              hideLoading();
+              showToast('Error: ' + err.message, 'error');
+            })
+            .approveActivationOnly(id, currentUser?.name || 'Admin', startDate);
         }
       );
     }
@@ -10000,9 +9943,11 @@
           <div class="stat-card" style="padding:15px; border-top-color:#6b46c1">
             <div class="stat-label" style="font-size:11px; margin-bottom:4px">TOTAL REVENUE</div>
             <div class="stat-value" style="font-size:18px; color:#6b46c1">${formatCurrency(report.summary.totalRevenue)}</div>
-            <div style="font-size:11px; color:#64748b; margin-top:8px; display:flex; justify-content:space-between">
+            <div style="font-size:11px; color:#64748b; margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:4px">
               <span>Cash: <b style="color:#1e293b">${formatCurrency(report.summary.cashIn || 0)}</b></span>
               <span>Trf: <b style="color:#1e293b">${formatCurrency(report.summary.transferIn || 0)}</b></span>
+              <span>QRIS: <b style="color:#1e293b">${formatCurrency(report.summary.qrisIn || 0)}</b></span>
+              <span>Debit: <b style="color:#1e293b">${formatCurrency(report.summary.debitIn || 0)}</b></span>
             </div>
           </div>
           
@@ -10019,7 +9964,7 @@
           <!-- Net Cash Box -->
           <div class="stat-card" style="padding:15px; border-top-color:#22c55e">
             <div class="stat-label" style="font-size:11px; margin-bottom:4px">KAS KOMBINASI (NET)</div>
-            <div class="stat-value" style="font-size:18px; color:#22c55e">${formatCurrency((report.summary.totalRevenue || 0) - (report.summary.totalExpenses || 0))}</div>
+            <div class="stat-value" style="font-size:18px; color:#22c55e">${formatCurrency(report.summary.netIncome)}</div>
             <div style="font-size:11px; color:#64748b; margin-top:8px; display:flex; justify-content:space-between">
               <span>Cash: <b style="color:#1e293b">${formatCurrency(report.summary.netCash || 0)}</b></span>
               <span>Trf: <b style="color:#1e293b">${formatCurrency(report.summary.netTransfer || 0)}</b></span>
