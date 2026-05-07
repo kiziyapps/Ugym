@@ -3000,9 +3000,24 @@
     }
 
     function formatDate(d) {
-      if (!d) return '-';
+      if (!d || d === '-') return '-';
+      
+      // Handle DD/MM/YYYY format from backend
+      if (typeof d === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
+        const parts = d.split('/');
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        const dt = new Date(year, month, day);
+        if (!isNaN(dt.getTime())) {
+          return dt.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+        return d;
+      }
+
       try {
         const dt = new Date(d);
+        if (isNaN(dt.getTime())) return d;
         return dt.toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'long',
