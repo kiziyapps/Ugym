@@ -7018,23 +7018,48 @@
           if (res && res.success) {
             // Update UI dengan data terbaru dari server
             renderCheckinProfile(res.member, false);
-            // Update cache juga agar sinkron
+            // Update cache agar sinkron (Tambah jika belum ada)
             LocalCache.update('all_members', (members) => {
-              const idx = members.findIndex(m => m.memberId === res.member.id);
+              const list = Array.isArray(members) ? members : [];
+              const mid = res.member.id || res.member.memberId;
+              const idx = list.findIndex(m => (m.memberId || m.id) === mid);
+              const memberData = { ...res.member, memberId: mid, fullName: res.member.name || res.member.fullName };
+              
               if (idx !== -1) {
-                members[idx] = { ...members[idx], ...res.member, memberId: res.member.id, fullName: res.member.name };
+                list[idx] = { ...list[idx], ...memberData };
+              } else {
+                list.push(memberData);
               }
-              return members;
+              return list;
             });
           } else if (!localM) {
-            // Hanya tampilkan error jika tidak ada data di cache
-            previewArea.innerHTML = `
-              <div class="checkin-error-card" style="margin-bottom:20px">
-                <h3 style="color:#991b1b">❌ Member Tidak Ditemukan</h3>
-                <p style="margin-top:8px">${escapeHtml(res.message || 'ID tidak terdaftar atau bermasalah')}</p>
-                <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="document.getElementById('checkinPreviewArea').innerHTML=''">Tutup</button>
-              </div>
-            `;
+            // Jika tidak ketemu dengan getMemberDetail (berdasarkan ID), coba cari lebih fleksibel (Nama/HP)
+            google.script.run
+              .withSuccessHandler(function (searchRes) {
+                if (searchRes && searchRes.success && searchRes.members && searchRes.members.length === 1) {
+                  // Jika ketemu TEPAT SATU, langsung tampilkan
+                  const found = searchRes.members[0];
+                  renderCheckinProfile(found, false);
+                  // Simpan ke cache
+                  LocalCache.update('all_members', (members) => {
+                    const list = Array.isArray(members) ? members : [];
+                    const mid = found.id || found.memberId;
+                    if (!list.find(m => (m.memberId || m.id) === mid)) {
+                      list.push({ ...found, memberId: mid, fullName: found.name || found.fullName });
+                    }
+                    return list;
+                  });
+                } else {
+                  previewArea.innerHTML = `
+                    <div class="checkin-error-card" style="margin-bottom:20px">
+                      <h3 style="color:#991b1b">❌ Member Tidak Ditemukan</h3>
+                      <p style="margin-top:8px">${escapeHtml(res.message || 'ID atau Nama tidak terdaftar')}</p>
+                      <button class="btn btn-secondary btn-sm" style="margin-top:12px" onclick="document.getElementById('checkinPreviewArea').innerHTML=''">Tutup</button>
+                    </div>
+                  `;
+                }
+              })
+              .searchMembers(mid);
           }
         })
         .withFailureHandler(function (err) {
