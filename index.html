@@ -180,7 +180,12 @@
               if (res.data.products) LocalCache.set('pos_products', res.data.products, 60);
               if (res.data.packages) LocalCache.set('catalogue_packages', res.data.packages, 60);
               if (res.data.stats) LocalCache.set('dashboard_stats', res.data.stats, 30);
-              if (res.data.members) LocalCache.set('all_members', res.data.members, 120);
+              if (res.data.members) {
+                LocalCache.set('all_members', res.data.members, 120);
+                SearchIndex.build(res.data.members); // BUILD INDEX UNTUK SEARCH INSTAN
+              }
+              if (res.data.recentTransactions) LocalCache.set('recent_transactions', res.data.recentTransactions, 60);
+              if (res.data.todayCheckins) LocalCache.set('today_checkins', res.data.todayCheckins, 60);
 
               // Trigger event untuk UI yang butuh update
               window.dispatchEvent(new CustomEvent('ugym_sync_complete', { detail: res.data }));
@@ -204,6 +209,186 @@
         const txt = document.getElementById('syncStatusText');
         if (dot) dot.className = 'status-dot ' + status;
         if (txt) txt.textContent = text;
+      }
+    };
+
+    // ================ IMPROVEMENT 4: SEARCH INDEXING ================
+    const SearchIndex = {
+      index: '',
+      map: [],
+      build: function (members) {
+        console.time('⚡ Building Search Index');
+        this.map = members;
+        this.index = members.map(m => {
+          return `${(m.memberId || m.id || '').toLowerCase()}|${(m.fullName || m.name || '').toLowerCase()}|${(m.phone || '').toLowerCase()}`;
+        }).join('\n');
+        console.timeEnd('⚡ Building Search Index');
+      },
+      search: function (query) {
+        if (!query || query.length < 2) return [];
+        const q = query.toLowerCase();
+        const results = [];
+        const lines = this.index.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].indexOf(q) !== -1) {
+            results.push(this.map[i]);
+          }
+        }
+        return results;
+      }
+    };
+
+    // ================ IMPROVEMENT 5: FORM AUTO-SAVE ================
+    const FormManager = {
+      key: 'ugym_form_backup',
+      save: function (formId, data) {
+        const backups = JSON.parse(localStorage.getItem(this.key) || '{}');
+        backups[formId] = { data: data, timestamp: Date.now() };
+        localStorage.setItem(this.key, JSON.stringify(backups));
+      },
+      load: function (formId) {
+        const backups = JSON.parse(localStorage.getItem(this.key) || '{}');
+        return backups[formId] ? backups[formId].data : null;
+      },
+      clear: function (formId) {
+        const backups = JSON.parse(localStorage.getItem(this.key) || '{}');
+        delete backups[formId];
+        localStorage.setItem(this.key, JSON.stringify(backups));
+      },
+      listen: function (formId, fields) {
+        fields.forEach(fid => {
+          const el = document.getElementById(fid);
+          if (!el) return;
+          el.addEventListener('input', () => {
+            const data = {};
+            fields.forEach(id => {
+              const item = document.getElementById(id);
+              if (item) data[id] = item.value;
+            });
+            this.save(formId, data);
+          });
+        });
+      },
+      restore: function (formId, fields) {
+        const data = this.load(formId);
+        if (data) {
+          fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el && data[id]) el.value = data[id];
+          });
+          return true;
+        }
+        return false;
+      }
+    };
+
+    // ================ IMPROVEMENT 3: LOCAL RECEIPT GENERATOR ================
+    const ReceiptGenerator = {
+      showPreview: function (data, type = 'membership') {
+        const modal = document.createElement('div');
+        modal.id = 'receiptPreviewModal';
+        modal.className = 'modal';
+        modal.style.display = 'flex';
+        modal.style.zIndex = '10000';
+        
+        let itemsHtml = '';
+        if (type === 'pos') {
+          itemsHtml = data.items.map(it => `
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+              <span>${it.name} x${it.qty}</span>
+              <span>${formatCurrency(it.total)}</span>
+            </div>
+          `).join('');
+        } else {
+          itemsHtml = `
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+              <span>Paket: ${data.packageName || data.currentPackage}</span>
+              <span>${formatCurrency(data.price || data.totalAmount)}</span>
+            </div>
+            ${data.registrationFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px"><span>Biaya Reg</span><span>${formatCurrency(data.registrationFee)}</span></div>` : ''}
+          `;
+        }
+
+        modal.innerHTML = `
+          <div class="modal-content" style="max-width:350px;border-radius:16px;overflow:hidden;padding:0">
+            <div style="background:#667eea;color:white;padding:20px;text-align:center">
+              <i class="fas fa-receipt fa-3x" style="margin-bottom:12px"></i>
+              <h3 style="margin:0">Transaksi Berhasil</h3>
+              <p style="margin:8px 0 0 0;opacity:0.8;font-size:13px">${data.receiptNumber || 'Baru'}</p>
+            </div>
+            <div style="padding:24px;background:white">
+              <div style="text-align:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px dashed #e2e8f0">
+                <h4 style="margin:0;color:#1e293b">${escapeHtml(data.memberName || data.customerName || 'Customer')}</h4>
+                <div style="font-size:12px;color:#64748b;margin-top:4px">${formatDateTime(new Date())}</div>
+              </div>
+              <div style="margin-bottom:20px">
+                ${itemsHtml}
+                <div style="margin-top:12px;padding-top:8px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;font-weight:700;color:#1e293b">
+                  <span>Total</span>
+                  <span>${formatCurrency(data.total || data.totalAmount)}</span>
+                </div>
+                <div style="margin-top:4px;font-size:11px;color:#64748b;text-align:right">Metode: ${data.paymentMethod}</div>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button class="btn btn-primary" style="flex:1" onclick="window.print();document.body.removeChild(document.getElementById('receiptPreviewModal'))">
+                  <i class="fas fa-print"></i> Cetak
+                </button>
+                <button class="btn btn-secondary" style="flex:1" onclick="document.body.removeChild(document.getElementById('receiptPreviewModal'))">
+                  Tutup
+                </button>
+              </div>
+            </div>
+            <div style="background:#f8fafc;padding:12px;text-align:center;font-size:11px;color:#94a3b8">Terima kasih atas kunjungan Anda</div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+      }
+    };
+
+    // ================ IMPROVEMENT 1: OPTIMISTIC UI HELPER ================
+    const OptimisticUI = {
+      addCheckin: function (member) {
+        // 1. Update Dashboard Count
+        const dashCheckins = document.getElementById('dash_checkinsToday');
+        if (dashCheckins) {
+          const current = parseInt(dashCheckins.textContent) || 0;
+          dashCheckins.textContent = current + 1;
+        }
+
+        // 2. Add to Recent Check-ins Table
+        const table = document.getElementById('todayCheckinsTable');
+        if (table) {
+          const tbody = table.querySelector('tbody');
+          if (tbody) {
+            const row = document.createElement('tr');
+            row.id = 'opt_ci_' + member.memberId;
+            row.style.background = '#f0fdf4'; // Light green highlight
+            row.style.transition = 'background 2s';
+            row.innerHTML = `
+              <td>#</td>
+              <td><b>${escapeHtml(member.fullName || member.name)} (Baru)</b></td>
+              <td><code>${escapeHtml(member.memberId || member.id)}</code></td>
+              <td>${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td><span class="badge badge-success">Member</span></td>
+              <td><span class="badge badge-success">Aktif</span></td>
+              <td><small class="text-muted">Sedang sinkronisasi...</small></td>
+            `;
+            tbody.insertBefore(row, tbody.firstChild);
+            
+            // Fade out the highlight
+            setTimeout(() => { row.style.background = 'transparent'; }, 2000);
+          }
+        }
+      },
+      removeCheckin: function (memberId) {
+        const row = document.getElementById('opt_ci_' + memberId);
+        if (row) row.parentNode.removeChild(row);
+        
+        const dashCheckins = document.getElementById('dash_checkinsToday');
+        if (dashCheckins) {
+          const current = parseInt(dashCheckins.textContent) || 0;
+          dashCheckins.textContent = Math.max(0, current - 1);
+        }
       }
     };
 
@@ -268,15 +453,22 @@
     };
 
     function localSearchMember(query) {
+      if (!query) return null;
       const q = query.toLowerCase().trim();
       if (q.length < 2) return null;
 
+      // IMPROVEMENT 4: Gunakan Search Index jika sudah siap
+      if (SearchIndex && SearchIndex.index) {
+        return SearchIndex.search(q).slice(0, 10);
+      }
+
+      // Fallback ke filter biasa jika index belum siap
       const all = LocalCache.get('all_members');
       if (!all || all.length === 0) return null;
 
       return all.filter(m =>
-        (m.fullName || '').toLowerCase().includes(q) ||
-        (m.memberId || '').toLowerCase().includes(q) ||
+        (m.fullName || m.name || '').toLowerCase().includes(q) ||
+        (m.memberId || m.id || '').toLowerCase().includes(q) ||
         (m.phone || '').includes(q)
       ).slice(0, 10);
     }
@@ -4013,6 +4205,11 @@
             </div>
           `;
 
+          // IMPROVEMENT 5: Restore & Listen Auto-Save
+          const formFields = ['reg_name', 'reg_dob', 'reg_phone', 'reg_email', 'reg_payment', 'reg_notes'];
+          FormManager.restore('member_reg', formFields);
+          FormManager.listen('member_reg', formFields);
+
           document.querySelectorAll('.pkg-card').forEach(card => {
             card.addEventListener('click', function () {
               updatePaymentInfo();
@@ -5054,6 +5251,9 @@
                   ` : ''}
                   
                   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+                    <button class="btn btn-primary btn-sm" onclick="ReceiptGenerator.showPreview({ receiptNumber: '${r.number}', memberName: '${r.memberName || selectedMember.fullName}', packageName: '${r.packageName || pkgName}', total: ${r.total || price}, paymentMethod: '${payEl.value}' }, 'membership')">
+                      <i class="fas fa-receipt"></i> Nota
+                    </button>
                     <button class="btn btn-info btn-sm" onclick="const txt = generateReceiptText('extension', { memberId:'${r.memberId || selectedMember.memberId}', name:'${r.memberName || selectedMember.fullName}', package:'${r.packageName || pkgName}', expiry:'${r.newExpiry}', receipt:'${r.number}', total:${r.total || price}, payment:'${payEl.value}' }); shareToWhatsApp('${selectedMember.phone}', txt)">
                       <i class="fab fa-whatsapp"></i> Kirim WA
                     </button>
@@ -5063,8 +5263,16 @@
                   </div>
                 `;
 
-                clearTrxForm(true);
+                // Auto-show local receipt preview
+                ReceiptGenerator.showPreview({
+                  receiptNumber: r.number,
+                  memberName: r.memberName || selectedMember.fullName,
+                  packageName: r.packageName || pkgName,
+                  total: r.total || price,
+                  paymentMethod: payEl.value
+                }, 'membership');
 
+                clearTrxForm(true);
                 resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
               } else {
                 resultEl.className = 'result-card error';
@@ -5554,11 +5762,14 @@
           return { ...s, posRevenue: (s.posRevenue || 0) + payload.total, posCount: (s.posCount || 0) + 1 };
         });
 
+        // IMPROVEMENT 3: Local Receipt Preview
+        ReceiptGenerator.showPreview(payload, 'pos');
+
         // Add to Sync Queue
         SyncQueue.add('processPOSTransaction', [payload]);
         
         hideLoading();
-        showToast('Transaksi Berhasil (Antrean)', 'success');
+        showToast('Transaksi Berhasil', 'success');
         resetPOS();
       });
     }
@@ -6774,8 +6985,9 @@
       const localM = all.find(m => (m.memberId || '').toUpperCase() === mid.toUpperCase());
 
       if (localM) {
-        console.log('⚡ Showing Instant Local Preview');
-        renderCheckinProfile(localM, true);
+        console.log('⚡ Showing Instant Local Preview (Verified by Cache)');
+        // Render dengan isLocal=false agar tombol aktif seketika
+        renderCheckinProfile(localM, false);
       } else {
         previewArea.innerHTML = `
           <div style="text-align:center;padding:20px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:20px">
@@ -6785,11 +6997,22 @@
         `;
       }
 
+      // Tetap panggil server di background untuk update data terbaru (opsional tapi bagus untuk akurasi)
       google.script.run
         .withSuccessHandler(function (res) {
           if (res && res.success) {
+            // Update UI dengan data terbaru dari server
             renderCheckinProfile(res.member, false);
-          } else {
+            // Update cache juga agar sinkron
+            LocalCache.update('all_members', (members) => {
+              const idx = members.findIndex(m => m.memberId === res.member.id);
+              if (idx !== -1) {
+                members[idx] = { ...members[idx], ...res.member, memberId: res.member.id, fullName: res.member.name };
+              }
+              return members;
+            });
+          } else if (!localM) {
+            // Hanya tampilkan error jika tidak ada data di cache
             previewArea.innerHTML = `
               <div class="checkin-error-card" style="margin-bottom:20px">
                 <h3 style="color:#991b1b">❌ Member Tidak Ditemukan</h3>
@@ -6800,7 +7023,7 @@
           }
         })
         .withFailureHandler(function (err) {
-          console.error('Checkin preview error:', err);
+          console.error('Checkin background verification error:', err);
         })
         .getMemberDetail(mid);
     }
@@ -7070,13 +7293,18 @@
           btn.disabled = false;
 
           if (res && res.success) {
-            // Optimistic Update Cache
+            // IMPROVEMENT 1: Optimistic Update Cache
             LocalCache.update('dashboard_stats', (s) => {
               return { ...s, checkins: (s.checkins || 0) + 1 };
             });
+            
+            // Add to table instantly
+            OptimisticUI.addCheckin(localM || res.member);
+
             LocalCache.update('all_members', (members) => {
               return members.map(m => {
-                if (m.memberId === (res.memberId || mid)) {
+                const midToCheck = res.memberId || mid;
+                if (m.memberId === midToCheck || m.id === midToCheck) {
                   let newSessions = m.ptSessionsLeft;
                   if (usePT) newSessions = Math.max(0, (m.ptSessionsLeft || 0) - 1);
                   return { ...m, ptSessionsLeft: newSessions };
@@ -7087,7 +7315,7 @@
 
             document.getElementById('checkinPreviewArea').innerHTML = '';
             showCheckinSuccess(res, mid);
-            loadTodayCheckins();
+            // loadTodayCheckins(); // Tidak perlu load ulang karena sudah optimistic
           } else {
             showCheckinError(res);
           }
@@ -7096,6 +7324,8 @@
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
+          // Rollback optimistic jika gagal
+          OptimisticUI.removeCheckin(mid);
           showCheckinError({ message: err.message });
         })
         .processCheckInWithPT({ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin');
@@ -9695,17 +9925,61 @@
       const modal = document.getElementById('dailyReportModal');
       const content = document.getElementById('dailyReportContent');
       modal.style.display = 'flex';
-      content.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px">Menyiapkan laporan harian...</p></div>';
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      content.innerHTML = `
+        <div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:20px;border:1px solid #e2e8f0">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;align-items:flex-end">
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="font-size:11px">DARI TANGGAL</label>
+              <input type="date" id="report_start" class="form-input" value="${today}">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label" style="font-size:11px">SAMPAI TANGGAL</label>
+              <input type="date" id="report_end" class="form-input" value="${today}">
+            </div>
+            <button class="btn btn-primary" onclick="generateRangeReport()" style="height:42px">
+              <i class="fas fa-search"></i> Tampilkan
+            </button>
+          </div>
+        </div>
+        <div id="reportLoadArea">
+          <div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px">Menyiapkan laporan...</p></div>
+        </div>
+      `;
 
+      // Cek Cache untuk laporan hari ini
+      const cachedReport = LocalCache.get('today_full_report');
+      if (cachedReport) {
+        console.log('⚡ Showing Instant Cached Report');
+        renderDailyReport(cachedReport);
+      } else {
+        generateRangeReport();
+      }
+    }
+
+    function generateRangeReport() {
+      const start = document.getElementById('report_start')?.value;
+      const end = document.getElementById('report_end')?.value;
+      const loadArea = document.getElementById('reportLoadArea');
+      
+      if (loadArea) loadArea.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px">Mengambil data laporan...</p></div>';
+      
       google.script.run
         .withSuccessHandler(function (res) {
           if (res.success) {
             renderDailyReport(res.report);
+            // Cache jika ini adalah laporan hari ini (range kosong atau start=end=today)
+            const today = new Date().toISOString().split('T')[0];
+            if ((!start || start === today) && (!end || end === today)) {
+              LocalCache.set('today_full_report', res.report, 30);
+            }
           } else {
-            content.innerHTML = '<div class="alert alert-error">Gagal memuat laporan: ' + res.message + '</div>';
+            if (loadArea) loadArea.innerHTML = '<div class="alert alert-error">Gagal memuat laporan: ' + res.message + '</div>';
           }
         })
-        .getDailyCashierReport(); // Default today
+        .getDailyCashierReport(start, end);
     }
 
     function closeDailyReportModal() {
@@ -9713,7 +9987,7 @@
     }
 
     function renderDailyReport(report) {
-      const content = document.getElementById('dailyReportContent');
+      const content = document.getElementById('reportLoadArea') || document.getElementById('dailyReportContent');
 
       let html = `
         <div style="margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:10px">
