@@ -8290,18 +8290,21 @@
                   
                   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
                     ${a.status === 'Paid' ? `
-                      <span class="badge badge-success" style="padding:8px 12px; font-size:11px">
-                        <i class="fas fa-money-bill-wave"></i> Pembayaran OK
-                      </span>
-                      <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
-                        <i class="fas fa-user-check"></i> Aktivasi Member
+                      <div style="flex:1; display:flex; flex-direction:column; gap:4px">
+                        <span class="badge badge-success" style="padding:6px 10px; font-size:10px; width:fit-content">
+                          <i class="fas fa-check-circle"></i> PEMBAYARAN TERVERIFIKASI
+                        </span>
+                        <small style="color:#64748b; font-size:10px">Uang sudah masuk laporan. Menunggu member tentukan tanggal mulai aktif.</small>
+                      </div>
+                      <button class="btn btn-primary btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
+                        <i class="fas fa-bolt"></i> Aktivasi Sekarang
                       </button>
                     ` : `
                       <button class="btn btn-info btn-sm" onclick="approvePayment('${escapeHtml(a.approvalId)}')">
-                        <i class="fas fa-credit-card"></i> Approve Bayar
+                        <i class="fas fa-credit-card"></i> 1. Approve Bayar
                       </button>
                       <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
-                        <i class="fas fa-check"></i> Aktivasi Member
+                        <i class="fas fa-check-double"></i> 2. Aktivasi (Jika tgl sdh tahu)
                       </button>
                     `}
                     <button class="btn btn-danger btn-sm" onclick="rejectRequest('${escapeHtml(a.approvalId)}')">
@@ -9955,9 +9958,11 @@
           <div class="stat-card" style="padding:15px; border-top-color:#ef4444">
             <div class="stat-label" style="font-size:11px; margin-bottom:4px">TOTAL PENGELUARAN</div>
             <div class="stat-value" style="font-size:18px; color:#ef4444">${formatCurrency(report.summary.totalExpenses)}</div>
-            <div style="font-size:11px; color:#64748b; margin-top:8px; display:flex; justify-content:space-between">
+            <div style="font-size:11px; color:#64748b; margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:4px">
               <span>Cash: <b style="color:#1e293b">${formatCurrency(report.summary.cashOut || 0)}</b></span>
               <span>Trf: <b style="color:#1e293b">${formatCurrency(report.summary.transferOut || 0)}</b></span>
+              <span>QRIS: <b style="color:#1e293b">${formatCurrency(report.summary.qrisOut || 0)}</b></span>
+              <span>Debit: <b style="color:#1e293b">${formatCurrency(report.summary.debitOut || 0)}</b></span>
             </div>
           </div>
 
@@ -9965,9 +9970,11 @@
           <div class="stat-card" style="padding:15px; border-top-color:#22c55e">
             <div class="stat-label" style="font-size:11px; margin-bottom:4px">KAS KOMBINASI (NET)</div>
             <div class="stat-value" style="font-size:18px; color:#22c55e">${formatCurrency(report.summary.netIncome)}</div>
-            <div style="font-size:11px; color:#64748b; margin-top:8px; display:flex; justify-content:space-between">
+            <div style="font-size:11px; color:#64748b; margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:4px">
               <span>Cash: <b style="color:#1e293b">${formatCurrency(report.summary.netCash || 0)}</b></span>
               <span>Trf: <b style="color:#1e293b">${formatCurrency(report.summary.netTransfer || 0)}</b></span>
+              <span>QRIS: <b style="color:#1e293b">${formatCurrency(report.summary.netQris || 0)}</b></span>
+              <span>Debit: <b style="color:#1e293b">${formatCurrency(report.summary.netDebit || 0)}</b></span>
             </div>
           </div>
         </div>
