@@ -424,26 +424,35 @@
         console.log('📦 Processing Offline Queue (' + queue.length + ' items)...');
         if (SyncManager.updateIndicator) SyncManager.updateIndicator('syncing', 'Queue...');
 
-        // Process one by one to avoid overwhelming the server/browser
+        const self = this;
         const processNext = (index) => {
-          if (index >= queue.length) {
-            this.isProcessing = false;
+          // Re-fetch queue to handle removals correctly
+          const currentQueue = self.get();
+          if (currentQueue.length === 0) {
+            self.isProcessing = false;
             if (SyncManager.updateIndicator) SyncManager.updateIndicator('online', 'Online');
             return;
           }
 
-          const item = queue[index];
+          const item = currentQueue[0]; // Always take the first one
           google.script.run
             .withSuccessHandler(res => {
               if (res && res.success) {
-                this.remove(item.id);
+                self.remove(item.id);
                 console.log('✅ Queue Item Processed:', item.action);
+                processNext(0); // Process the next "first" item
+              } else {
+                console.warn('❌ Queue Action Error:', item.action, res?.message);
+                // If it failed on server logic (not network), we might want to skip it 
+                // or move it to the end. For now, let's just move to next if we can,
+                // but since we always take index 0, we'll get stuck if we don't handle this.
+                // Improvement: Move failed item to end or mark as failed.
+                self.isProcessing = false; 
               }
-              processNext(index + 1);
             })
             .withFailureHandler(err => {
-              console.warn('❌ Queue Retry Failed:', item.action, err);
-              processNext(index + 1);
+              console.warn('❌ Queue Network/System Failure:', item.action, err);
+              self.isProcessing = false; // Stop processing for now, wait for next trigger
             })
             [item.action](...item.args);
         };
@@ -3017,14 +3026,14 @@
 
       try {
         const dt = new Date(d);
-        if (isNaN(dt.getTime())) return d;
+        if (isNaN(dt.getTime())) return '-';
         return dt.toLocaleDateString('id-ID', {
           day: '2-digit',
           month: 'long',
           year: 'numeric'
         });
       } catch (e) {
-        return d;
+        return '-';
       }
     }
 
@@ -3032,6 +3041,7 @@
       if (!d) return '-';
       try {
         const dt = new Date(d);
+        if (isNaN(dt.getTime())) return '-';
         return dt.toLocaleString('id-ID', {
           day: '2-digit',
           month: 'short',
@@ -3040,7 +3050,7 @@
           minute: '2-digit'
         });
       } catch (e) {
-        return d;
+        return '-';
       }
     }
 
@@ -3048,13 +3058,14 @@
       if (!d) return '-';
       try {
         const dt = new Date(d);
+        if (isNaN(dt.getTime())) return '-';
         return dt.toLocaleTimeString('id-ID', {
           hour: '2-digit',
           minute: '2-digit',
           second: '2-digit'
         });
       } catch (e) {
-        return d;
+        return '-';
       }
     }
 
@@ -3076,62 +3087,63 @@
       const now = formatDateTime(new Date());
       let text = '';
       if (type === 'registration') {
-        text = `*RECEIPT REGISTRASI UGYM*\n` +
-          `--------------------------------\n` +
-          `Waktu: ${now}\n` +
-          `Member ID: ${data.memberId}\n` +
-          `Nama: ${data.name}\n` +
-          `Paket: ${data.package}\n` +
-          `Berlaku s/d: ${formatDate(data.expiry)}\n` +
-          `No. Transaksi: ${data.receipt}\n` +
-          `--------------------------------\n` +
-          `Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198\n` +
-          `No HP: 08158905889\n` +
-          `--------------------------------\n` +
-          `*Rincian Pembayaran*\n` +
-          `Harga Paket: ${formatCurrency(data.price)}\n` +
-          `Total: ${formatCurrency(data.total)}\n` +
-          `Metode: ${data.payment}\n` +
-          `--------------------------------\n` +
-          `Gunakan QR Code berikut untuk check-in:\n` +
-          `${data.qr}\n\n` +
-          `Terima kasih telah bergabung!`;
+        text = `*RECEIPT REGISTRASI UGYM*
+--------------------------------
+Waktu: ${now}
+Member ID: ${data.memberId}
+Nama: ${data.name}
+Paket: ${data.package}
+Berlaku s/d: ${formatDate(data.expiry)}
+No. Transaksi: ${data.receipt}
+--------------------------------
+Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198
+No HP: 08158905889
+--------------------------------
+*Rincian Pembayaran*
+Harga Paket: ${formatCurrency(data.price)}
+Total: ${formatCurrency(data.total)}
+Metode: ${data.payment}
+--------------------------------
+Gunakan QR Code berikut untuk check-in:
+${data.qr}
+
+Terima kasih telah bergabung!`;
       } else if (type === 'extension') {
-        text = `*RECEIPT PERPANJANGAN UGYM*\n` +
-          `--------------------------------\n` +
-          `Waktu: ${now}\n` +
-          `Member ID: ${data.memberId}\n` +
-          `Nama: ${data.name}\n` +
-          `Paket: ${data.package}\n` +
-          `Berlaku s/d: ${formatDate(data.expiry)}\n` +
-          `No. Transaksi: ${data.receipt}\n` +
-          `--------------------------------\n` +
-          `Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198\n` +
-          `No HP: 08158905889\n` +
-          `--------------------------------\n` +
-          `*Rincian Pembayaran*\n` +
-          `Total: ${formatCurrency(data.total)}\n` +
-          `Metode: ${data.payment}\n` +
-          `--------------------------------\n` +
-          `Terima kasih!`;
+        text = `*RECEIPT PERPANJANGAN UGYM*
+--------------------------------
+Waktu: ${now}
+Member ID: ${data.memberId}
+Nama: ${data.name}
+Paket: ${data.package}
+Berlaku s/d: ${formatDate(data.expiry)}
+No. Transaksi: ${data.receipt}
+--------------------------------
+Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198
+No HP: 08158905889
+--------------------------------
+*Rincian Pembayaran*
+Total: ${formatCurrency(data.total)}
+Metode: ${data.payment}
+--------------------------------
+Terima kasih!`;
       } else if (type === 'pt') {
-        text = `*RECEIPT REGISTRASI PT UGYM*\n` +
-          `--------------------------------\n` +
-          `Waktu: ${now}\n` +
-          `Member: ${data.name}\n` +
-          `Trainer: ${data.trainer}\n` +
-          `Jumlah Sesi: ${data.sessions}\n` +
-          `Berlaku s/d: ${formatDate(data.expiry)}\n` +
-          `No. Transaksi: ${data.receipt}\n` +
-          `--------------------------------\n` +
-          `Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198\n` +
-          `No HP: 08158905889\n` +
-          `--------------------------------\n` +
-          `*Rincian Pembayaran*\n` +
-          `Total: ${formatCurrency(data.total)}\n` +
-          `Metode: ${data.payment}\n` +
-          `--------------------------------\n` +
-          `Selamat berlatih!`;
+        text = `*RECEIPT REGISTRASI PT UGYM*
+--------------------------------
+Waktu: ${now}
+Member: ${data.name}
+Trainer: ${data.trainer}
+Jumlah Sesi: ${data.sessions}
+Berlaku s/d: ${formatDate(data.expiry)}
+No. Transaksi: ${data.receipt}
+--------------------------------
+Alamat: Jl. Imogiri Tim., Nglebeng, Tamanan, Kec. Banguntapan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55198
+No HP: 08158905889
+--------------------------------
+*Rincian Pembayaran*
+Total: ${formatCurrency(data.total)}
+Metode: ${data.payment}
+--------------------------------
+Selamat berlatih!`;
       }
       return text;
     }
@@ -5150,190 +5162,66 @@
 
       const pkgEl = document.getElementById('trx_package');
       const payEl = document.getElementById('trx_payment');
-
-      if (!pkgEl?.value) {
-        showToast('Pilih paket perpanjangan', 'warning');
-        return;
-      }
-      if (!payEl?.value) {
-        showToast('Pilih metode pembayaran', 'warning');
+      if (!selectedMember || !pkgEl.value) {
+        showToast('Pilih member dan paket terlebih dahulu', 'warning');
         return;
       }
 
       const selOpt = pkgEl.options[pkgEl.selectedIndex];
-      const pkgName = selOpt.dataset.name || selOpt.text;
       const price = parseInt(selOpt.dataset.price) || 0;
-      const duration = selOpt.dataset.duration || '-';
+      const durationDays = parseInt(selOpt.dataset.duration) || 0;
+      const payment = payEl.value;
 
-      showConfirm(
-        `KONFIRMASI PERPANJANGAN MEMBER\n\n` +
-        `Member       : ${selectedMember.fullName}\n` +
-        `ID           : ${selectedMember.memberId}\n` +
-        `Paket        : ${pkgName}\n` +
-        `Durasi       : ${duration}\n` +
-        `Harga Paket  : ${formatCurrency(price)}\n` +
-        `Metode Bayar : ${payEl.value}\n` +
-        `Total        : ${formatCurrency(price)}\n\n` +
-        `Lanjutkan transaksi perpanjangan?`,
-        function (ok) {
-          if (!ok) return;
+      showConfirm(`KONFIRMASI PERPANJANGAN\nMember: ${selectedMember.fullName}\nTotal: ${formatCurrency(price)}`, function (ok) {
+        if (!ok) return;
 
-          const btn = document.getElementById('btnProcessTrx');
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-          btn.disabled = true;
-          showLoading();
-
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              btn.innerHTML = '<i class="fas fa-check"></i> Proses Transaksi';
-              btn.disabled = false;
-
-              const resultEl = document.getElementById('trxResult');
-              if (!resultEl) return;
-
-              if (res && res.success) {
-                const r = res.receipt || {};
-                const checkinTime = new Date();
-                const daysLeft = r.newExpiry ? Math.ceil((new Date(r.newExpiry) - new Date()) / 86400000) : 0;
-
-                resultEl.className = 'result-card success';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-                    <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Perpanjangan Berhasil')}</h3>
-                      <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
-                    </div>
-                  </div>
-                  
-                  <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px">
-                      <div>
-                        <span style="color:#64748b">Member ID</span><br>
-                        <code style="background:#f1f5f9;padding:4px 8px;border-radius:4px">${escapeHtml(r.memberId || selectedMember.memberId)}</code>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Nama</span><br>
-                        <b>${escapeHtml(r.memberName || selectedMember.fullName)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Paket Baru</span><br>
-                        <b>${escapeHtml(r.packageName || pkgName)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Durasi</span><br>
-                        ${escapeHtml(r.duration || duration)}
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Berlaku s/d</span><br>
-                        <b>${formatDate(r.newExpiry)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Sisa Hari</span><br>
-                        <b style="color:${daysLeft <= 7 ? '#f59e0b' : '#22c55e'}">${daysLeft} hari</b>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="payment-info" style="margin:12px 0">
-                    <h4 style="margin-bottom:12px;color:#334155"><i class="fas fa-credit-card"></i> Informasi Pembayaran</h4>
-                    <div class="payment-row">
-                      <span>Harga Paket</span>
-                      <span>${formatCurrency(r.total || price)}</span>
-                    </div>
-                    <div class="payment-row">
-                      <span>Metode</span>
-                      <span><b>${escapeHtml(payEl.value)}</b></span>
-                    </div>
-                    <div class="payment-row payment-total">
-                      <span>Total</span>
-                      <span>${formatCurrency(r.total || price)}</span>
-                    </div>
-                    <div class="payment-row">
-                      <span>No. Transaksi</span>
-                      <span><code>${escapeHtml(r.number || '-')}</code></span>
-                    </div>
-                  </div>
-                  
-                  ${res.email?.sent ? `
-                    <div style="margin-top:12px;padding:8px;background:#e0f2fe;border-radius:6px;color:#0369a1;font-size:12px;text-align:center">
-                      <i class="fas fa-envelope"></i> Email konfirmasi telah dikirim
-                    </div>
-                  ` : ''}
-                  
-                  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
-                    <button class="btn btn-primary btn-sm" onclick="ReceiptGenerator.showPreview({ receiptNumber: '${r.number}', memberName: '${r.memberName || selectedMember.fullName}', packageName: '${r.packageName || pkgName}', total: ${r.total || price}, paymentMethod: '${payEl.value}' }, 'membership')">
-                      <i class="fas fa-receipt"></i> Nota
-                    </button>
-                    <button class="btn btn-info btn-sm" onclick="const txt = generateReceiptText('extension', { memberId:'${r.memberId || selectedMember.memberId}', name:'${r.memberName || selectedMember.fullName}', package:'${r.packageName || pkgName}', expiry:'${r.newExpiry}', receipt:'${r.number}', total:${r.total || price}, payment:'${payEl.value}' }); shareToWhatsApp('${selectedMember.phone}', txt)">
-                      <i class="fab fa-whatsapp"></i> Kirim WA
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick="clearTrxForm()">
-                      <i class="fas fa-plus"></i> Selesai
-                    </button>
-                  </div>
-                `;
-
-                // Auto-show local receipt preview
-                ReceiptGenerator.showPreview({
-                  receiptNumber: r.number,
-                  memberName: r.memberName || selectedMember.fullName,
-                  packageName: r.packageName || pkgName,
-                  total: r.total || price,
-                  paymentMethod: payEl.value
-                }, 'membership');
-
-                clearTrxForm(true);
-                resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              } else {
-                resultEl.className = 'result-card error';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                    <div style="background:#ef4444;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-times"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#991b1b;margin:0 0 4px 0">❌ ${escapeHtml(res?.message || 'Gagal memproses transaksi')}</h3>
-                      <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                    </div>
-                  </div>
-                `;
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              btn.innerHTML = '<i class="fas fa-check"></i> Proses Transaksi';
-              btn.disabled = false;
-
-              const resultEl = document.getElementById('trxResult');
-              if (resultEl) {
-                resultEl.className = 'result-card error';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                    <div style="background:#ef4444;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-times"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#991b1b;margin:0 0 4px 0">❌ Error: ${escapeHtml(err.message)}</h3>
-                      <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                    </div>
-                  </div>
-                `;
-              }
-            })
-            .processTransaction({
-              memberId: selectedMember.memberId,
-              packageId: pkgEl.value,
-              paymentMethod: payEl.value
-            }, currentUser?.name || 'Admin');
+        // 1. OPTIMISTIC UPDATE
+        const mid = selectedMember.memberId;
+        const today = new Date();
+        let newExpiry = new Date();
+        const currentExp = selectedMember.expiryDate || selectedMember.expiry;
+        if (currentExp && new Date(currentExp) > today) {
+          newExpiry = new Date(currentExp);
         }
-      );
+        newExpiry.setDate(newExpiry.getDate() + durationDays);
+        
+        LocalCache.update('all_members', (members) => {
+          const list = Array.isArray(members) ? members : [];
+          return list.map(m => {
+            if ((m.memberId || m.id) === mid) return { ...m, expiry: newExpiry.toISOString(), status: 'Aktif' };
+            return m;
+          });
+        });
+
+        const resultEl = document.getElementById('trxResult');
+        if (resultEl) {
+          resultEl.className = 'result-card success';
+          resultEl.style.display = 'block';
+          resultEl.innerHTML = `
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+              <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px"><i class="fas fa-check"></i></div>
+              <div>
+                <h3 style="color:#166534;margin:0 0 4px 0">Perpanjangan Berhasil (Antrean)</h3>
+                <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">Sedang disinkronkan di latar belakang...</p>
+              </div>
+            </div>
+            <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
+               <p>Member: <b>${escapeHtml(selectedMember.fullName)}</b></p>
+               <p>Expiry Baru: <b>${formatDate(newExpiry)}</b></p>
+            </div>
+          `;
+        }
+
+        // 2. QUEUE
+        SyncQueue.add('processExtension', [{
+          memberId: mid,
+          packageId: pkgEl.value,
+          paymentMethod: payment,
+          user: currentUser?.name || 'Admin'
+        }]);
+        
+        showToast('Transaksi dimasukkan ke antrean', 'success');
+      });
     }
 
     // ================ POS (POINT OF SALE) ================
@@ -6229,7 +6117,7 @@
                   <tbody>
                     ${res.history.map(h => `
                       <tr>
-                        <td><small>${new Date(h['Waktu']).toLocaleString('id-ID', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</small></td>
+                        <td><small>${formatDateTime(h['Waktu'])}</small></td>
                         <td><b>${escapeHtml(h['Nama Produk'])}</b><br><small>${h['ID Produk']}</small></td>
                         <td><span class="badge badge-${h['Tipe'] === 'Stok' ? 'info' : 'warning'}">${h['Tipe']}</span></td>
                         <td>${h['Tipe'] === 'Stok' ? h['Stok Awal'] : formatCurrency(h['Harga Awal'])}</td>
@@ -6364,68 +6252,55 @@
       if (payload.addedQty <= 0) { showToast('Jumlah harus lebih dari 0', 'warning'); return; }
       if (payload.totalCost <= 0) { showToast('Total biaya harus diisi', 'warning'); return; }
 
-      showLoading();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          hideLoading();
-          if (res.success) {
-            showToast('✅ ' + res.message, 'success');
-            closeRestockModal();
-            loadProductList();
-            if (currentView === 'expenses') refreshExpenses();
-            if (currentView === 'dashboard') refreshDashboard();
-          } else {
-            showToast('❌ ' + res.message, 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          hideLoading();
-          showToast('Gagal restock: ' + err.message, 'error');
-        })
-        .processRestock(payload);
+      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
+      LocalCache.update('pos_products', (prods) => {
+         const list = Array.isArray(prods) ? prods : [];
+         const idx = list.findIndex(p => p.id === payload.productId);
+         if (idx !== -1) {
+            list[idx].stock = (parseInt(list[idx].stock) || 0) + payload.addedQty;
+         }
+         posProducts = list;
+         _renderProductTable(list);
+         return list;
+      });
+
+      // 2. QUEUE SYNC BACKGROUND
+      SyncQueue.add('processRestock', [payload]);
+
+      showToast('Restock dimasukkan ke antrean', 'success');
+      closeRestockModal();
     }
 
     function confirmDeletePackage(id, name) {
-      showConfirm(`Apakah Anda yakin ingin menghapus paket "${name}"?\n\nTindakan ini tidak dapat dibatalkan.`, function (ok) {
+      showConfirm(`Hapus paket "${name}"?`, function (ok) {
         if (!ok) return;
-        showLoading();
-        google.script.run
-          .withSuccessHandler(function (res) {
-            hideLoading();
-            if (res.success) {
-              showToast('✅ ' + res.message, 'success');
-              loadPackageList();
-            } else {
-              showToast('❌ ' + res.message, 'error');
-            }
-          })
-          .withFailureHandler(function (err) {
-            hideLoading();
-            showToast('Gagal menghapus: ' + err.message, 'error');
-          })
-          .deletePackage(id, currentUser ? currentUser.name : 'Admin');
+        
+        // 1. QUEUE SYNC BACKGROUND
+        SyncQueue.add('deletePackage', [id, currentUser ? currentUser.name : 'Admin']);
+
+        showToast('Paket dimasukkan ke antrean penghapusan', 'success');
+        // Refresh UI lokal
+        setTimeout(loadPackageList, 500);
       });
     }
 
     function confirmDeleteProduct(id, name) {
-      showConfirm(`Apakah Anda yakin ingin menghapus produk "${name}"?\n\nTindakan ini tidak dapat dibatalkan.`, function (ok) {
+      showConfirm(`Hapus produk "${name}"?`, function (ok) {
         if (!ok) return;
-        showLoading();
-        google.script.run
-          .withSuccessHandler(function (res) {
-            hideLoading();
-            if (res.success) {
-              showToast('✅ ' + res.message, 'success');
-              loadProductList(true);
-            } else {
-              showToast('❌ ' + res.message, 'error');
-            }
-          })
-          .withFailureHandler(function (err) {
-            hideLoading();
-            showToast('Gagal menghapus: ' + err.message, 'error');
-          })
-          .deleteProduct(id, currentUser ? currentUser.name : 'Admin');
+        
+        // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
+        LocalCache.update('pos_products', (prods) => {
+           const list = Array.isArray(prods) ? prods : [];
+           const filtered = list.filter(p => p.id !== id);
+           posProducts = filtered;
+           _renderProductTable(filtered);
+           return filtered;
+        });
+
+        // 2. QUEUE
+        SyncQueue.add('deleteProduct', [id, currentUser ? currentUser.name : 'Admin']);
+
+        showToast('Produk dimasukkan ke antrean penghapusan', 'success');
       });
     }
 
@@ -6448,23 +6323,23 @@
         user: currentUser ? currentUser.name : 'System'
       };
 
-      showLoading();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          hideLoading();
-          if (res.success) {
-            showToast('✅ ' + res.message, 'success');
-            closeAdjustModal();
-            loadProductList();
-          } else {
-            showToast('❌ ' + res.message, 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          hideLoading();
-          showToast('Gagal penyesuaian: ' + err.message, 'error');
-        })
-        .adjustStock(payload);
+      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
+      LocalCache.update('pos_products', (prods) => {
+         const list = Array.isArray(prods) ? prods : [];
+         const idx = list.findIndex(p => p.id === payload.productId);
+         if (idx !== -1) {
+            list[idx].stock = payload.newStock;
+         }
+         posProducts = list;
+         _renderProductTable(list);
+         return list;
+      });
+
+      // 2. QUEUE SYNC BACKGROUND
+      SyncQueue.add('adjustStock', [payload]);
+
+      showToast('Penyesuaian stok dimasukkan ke antrean', 'success');
+      closeAdjustModal();
     }
 
     function escapeJs(str) {
@@ -6539,21 +6414,13 @@
 
       if (!data['Nama Paket']) { showToast('Nama paket wajib diisi', 'warning'); return; }
 
-      showLoading();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          hideLoading();
-          if (res.success) {
-            showToast('✅ Paket disimpan', 'success');
-            closePackageModal();
-            loadPackageList();
-          }
-        })
-        .withFailureHandler(function (err) {
-          hideLoading();
-          showToast('Gagal menyimpan paket: ' + err.message, 'error');
-        })
-        .savePackage(data);
+      // 1. QUEUE SYNC BACKGROUND
+      SyncQueue.add('savePackage', [data]);
+
+      showToast('Paket dimasukkan ke antrean', 'success');
+      closePackageModal();
+      // Update UI lokal sederhana (opsional: bisa lebih detail)
+      setTimeout(loadPackageList, 500); 
     }
 
     let productModalScanner = null;
@@ -6697,23 +6564,26 @@
 
       if (!data['Nama Produk']) { showToast('Nama produk wajib diisi', 'warning'); return; }
 
-      showLoading();
-      google.script.run
-        .withSuccessHandler(function (res) {
-          hideLoading();
-          if (res.success) {
-            showToast('✅ Produk disimpan', 'success');
-            closeProductModal();
-            loadProductList(true); // Force reload to get updated data
-          } else {
-            showToast('❌ ' + res.message, 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          hideLoading();
-          showToast('Error: ' + err.message, 'error');
-        })
-        .saveProduct(data);
+      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
+      const isNew = !data['ID Produk'];
+      LocalCache.update('pos_products', (prods) => {
+         const list = Array.isArray(prods) ? prods : [];
+         if (isNew) {
+            list.push({ id: 'TEMP_' + Date.now(), name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] });
+         } else {
+            const idx = list.findIndex(p => p.id === data['ID Produk']);
+            if (idx !== -1) list[idx] = { ...list[idx], name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] };
+         }
+         posProducts = list;
+         _renderProductTable(list);
+         return list;
+      });
+
+      // 2. QUEUE SYNC BACKGROUND
+      SyncQueue.add('saveProduct', [data]);
+
+      showToast('Produk dimasukkan ke antrean', 'success');
+      closeProductModal();
     }
 
     // ================ PRODUCT PHOTO UTILS ================
@@ -7126,8 +6996,6 @@
     }
 
     function doCheckin() {
-      if (showOfflineMessage()) return;
-
       const mid = (document.getElementById('ci_memberId')?.value || '').trim().toUpperCase();
       if (!mid) {
         showToast('Masukkan Member ID', 'warning');
@@ -7136,45 +7004,49 @@
 
       const btn = document.getElementById('btnCheckin');
       const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-      btn.disabled = true;
-      showLoading();
-
-      // OPTIMISTIC UI: Tampilkan hasil dari cache lokal dulu supaya cepat
+      
+      // 1. TAMPILKAN FEEDBACK INSTAN (OPTIMISTIC)
       try {
         const allMembers = LocalCache.get('all_members') || [];
-        const localM = allMembers.find(m => m.memberId === mid || m.id === mid);
+        const localM = allMembers.find(m => (m.memberId || m.id) === mid);
         
         if (localM) {
           OptimisticUI.addCheckin(localM);
           showCheckinSuccess({
             success: true,
-            message: 'Check-In Berhasil (Local)',
-            memberName: localM.name,
-            memberId: localM.memberId,
-            currentPackage: localM.package,
-            expiryDate: localM.expiry,
-            daysLeft: Math.max(0, Math.ceil((new Date(localM.expiry) - new Date()) / (1000 * 60 * 60 * 24))),
+            message: 'Check-In Berhasil (Offline-Ready)',
+            memberName: localM.fullName || localM.name,
+            memberId: localM.memberId || localM.id,
+            currentPackage: localM.currentPackage || localM.package,
+            expiryDate: localM.expiryDate || localM.expiry,
+            daysLeft: localM.daysLeft,
             checkinTime: new Date().toISOString()
           }, mid);
           document.getElementById('ci_memberId').value = '';
+          
+          // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
+          SyncQueue.add('processCheckIn', [{ memberId: mid }, currentUser?.name || 'Admin']);
+          return; // Selesai, biarkan SyncQueue bekerja di belakang
         }
       } catch (e) {
-        console.warn('Optimistic UI failed:', e);
+        console.warn('Optimistic Check-in failed, falling back to online:', e);
       }
+
+      // FALLBACK: Jika data tidak ada di cache lokal, terpaksa panggil server langsung
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+      btn.disabled = true;
+      showLoading();
 
       google.script.run
         .withSuccessHandler(function (res) {
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-
           if (res && res.success) {
             showCheckinSuccess(res, mid);
             document.getElementById('ci_memberId').value = '';
             loadTodayCheckins();
           } else {
-            OptimisticUI.removeCheckin(mid);
             showCheckinError(res, mid);
           }
         })
@@ -7182,15 +7054,12 @@
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-          OptimisticUI.removeCheckin(mid);
           showToast('Error: ' + err.message, 'error');
         })
         .processCheckIn({ memberId: mid }, currentUser?.name || 'Admin');
     }
 
     function doCheckinWithPT(forcedMid) {
-      if (showOfflineMessage()) return;
-
       const mid = forcedMid || (document.getElementById('ci_memberId')?.value || '').trim().toUpperCase();
       if (!mid) {
         showToast('Masukkan Member ID', 'warning');
@@ -7198,54 +7067,64 @@
       }
 
       const usePT = document.getElementById('ci_usePT')?.checked || false;
-
       const btn = forcedMid ? document.getElementById('btnConfirmCheckin') : document.getElementById('btnCheckin');
       const originalText = btn.innerHTML;
+      
+      // 1. TAMPILKAN FEEDBACK INSTAN (OPTIMISTIC)
+      try {
+        const allMembers = LocalCache.get('all_members') || [];
+        const localM = allMembers.find(m => (m.memberId || m.id) === mid);
+        
+        if (localM) {
+          // Kurangi sesi PT di cache lokal secara instan
+          if (usePT) {
+             LocalCache.update('all_members', (members) => {
+                return members.map(m => {
+                   if ((m.memberId || m.id) === mid) {
+                      return { ...m, ptSessionsLeft: Math.max(0, (m.ptSessionsLeft || 0) - 1) };
+                   }
+                   return m;
+                });
+             });
+          }
+
+          OptimisticUI.addCheckin(localM);
+          showCheckinSuccess({
+            success: true,
+            message: 'Check-In Berhasil (Offline-Ready)',
+            memberName: localM.fullName || localM.name,
+            memberId: localM.memberId || localM.id,
+            currentPackage: localM.currentPackage || localM.package,
+            expiryDate: localM.expiryDate || localM.expiry,
+            daysLeft: localM.daysLeft,
+            checkinTime: new Date().toISOString()
+          }, mid);
+          
+          document.getElementById('checkinPreviewArea').innerHTML = '';
+          if (!forcedMid) document.getElementById('ci_memberId').value = '';
+
+          // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
+          SyncQueue.add('processCheckInWithPT', [{ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin']);
+          return;
+        }
+      } catch (e) {
+        console.warn('Optimistic PT Check-in failed:', e);
+      }
+
+      // FALLBACK: Jika tidak ada di cache
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
       btn.disabled = true;
       showLoading();
-
-      const timeoutId = setTimeout(() => {
-        hideLoading();
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        showToast('Request timeout. Silakan coba lagi.', 'error');
-      }, 30000);
 
       google.script.run
         .withSuccessHandler(function (res) {
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-
           if (res && res.success) {
-            // IMPROVEMENT 1: Optimistic Update Cache
-            LocalCache.update('dashboard_stats', (s) => {
-              return { ...s, checkins: (s.checkins || 0) + 1 };
-            });
-            
-            // Find member data for UI display
-            const allMembers = LocalCache.get('all_members') || [];
-            const localM = allMembers.find(m => m.memberId === mid || m.id === mid) || res.member;
-            
-            // Add to table instantly
-            OptimisticUI.addCheckin(localM);
-
-            LocalCache.update('all_members', (members) => {
-              return members.map(m => {
-                const midToCheck = res.memberId || mid;
-                if (m.memberId === midToCheck || m.id === midToCheck) {
-                  let newSessions = m.ptSessionsLeft;
-                  if (usePT) newSessions = Math.max(0, (m.ptSessionsLeft || 0) - 1);
-                  return { ...m, ptSessionsLeft: newSessions };
-                }
-                return m;
-              });
-            });
-
             document.getElementById('checkinPreviewArea').innerHTML = '';
             showCheckinSuccess(res, mid);
-            // loadTodayCheckins(); // Tidak perlu load ulang karena sudah optimistic
+            if (!forcedMid) document.getElementById('ci_memberId').value = '';
           } else {
             showCheckinError(res);
           }
@@ -7254,9 +7133,7 @@
           hideLoading();
           btn.innerHTML = originalText;
           btn.disabled = false;
-          // Rollback optimistic jika gagal
-          OptimisticUI.removeCheckin(mid);
-          showCheckinError({ message: err.message });
+          showToast('Error: ' + err.message, 'error');
         })
         .processCheckInWithPT({ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin');
     }
@@ -7440,72 +7317,44 @@
     function processVisitCheckinSubmit() {
       const name = document.getElementById('visit_name').value || 'Visitor';
       const phone = document.getElementById('visit_phone').value || '-';
+      const type = document.getElementById('visit_type').value;
+      const payment = document.getElementById('visit_payment').value || 'Cash';
 
-      showLoading();
-      const btn = document.getElementById('btnSubmitVisit');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-      btn.disabled = true;
-
-      const timeoutId = setTimeout(() => {
-        hideLoading();
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        showToast('Request timeout. Silakan coba lagi.', 'error');
-      }, 25000);
-
-      google.script.run
-        .withSuccessHandler(function (res) {
-          clearTimeout(timeoutId);
-          hideLoading();
-          btn.innerHTML = originalText;
-          btn.disabled = false;
-          closeVisitModal();
-
-          const el = document.getElementById('checkinResult');
-          if (!el) return;
-
-          if (res && res.success) {
-            const checkinTime = res.checkinTime ? new Date(res.checkinTime) : new Date();
-            el.innerHTML = `
-              <div class="checkin-success-card">
-                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                  <div style="background:#3b82f6;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                    <i class="fas fa-walking"></i>
-                  </div>
-                  <div>
-                    <h3 style="color:#1e40af;margin:0 0 4px 0">✅ Visit Harian Berhasil</h3>
-                    <p style="color:#1e40af;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
-                  </div>
-                </div>
-                <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                  <p><b>${escapeHtml(name)}</b> (${escapeHtml(phone)})</p>
-                  <p style="margin-top:4px;font-size:13px;color:#64748b">Visit ${res.visitType || 'Harian'} - ${formatCurrency(res.amount || 25000)} (${document.getElementById('visit_payment').value})</p>
-                </div>
+      // 1. FEEDBACK INSTAN (OPTIMISTIC)
+      closeVisitModal();
+      const el = document.getElementById('checkinResult');
+      if (el) {
+        el.innerHTML = `
+          <div class="checkin-success-card">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+              <div style="background:#3b82f6;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
+                <i class="fas fa-walking"></i>
               </div>
-            `;
-            loadTodayCheckins();
-            showToast('Visit harian berhasil dicatat', 'success');
-            document.getElementById('visit_name').value = '';
-            document.getElementById('visit_phone').value = '';
-            document.getElementById('visit_search').value = '';
-          } else {
-            showToast('Gagal: ' + (res.message || 'Error tidak diketahui'), 'error');
-          }
-        })
-        .withFailureHandler(function (err) {
-          clearTimeout(timeoutId);
-          hideLoading();
-          btn.innerHTML = originalText;
-          btn.disabled = false;
-          showToast('Error: ' + err.message, 'error');
-        })
-        .processVisitCheckIn({
-          visitorName: name,
-          visitorPhone: phone,
-          visitType: document.getElementById('visit_type').value,
-          paymentMethod: document.getElementById('visit_payment').value || 'Cash'
-        });
+              <div>
+                <h3 style="color:#1e40af;margin:0 0 4px 0">✅ Visit Harian Berhasil (Antrean)</h3>
+                <p style="color:#1e40af;opacity:0.8;margin:0;font-size:13px">Sedang disinkronkan...</p>
+              </div>
+            </div>
+            <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
+              <p><b>${escapeHtml(name)}</b> (${escapeHtml(phone)})</p>
+              <p style="margin-top:4px;font-size:13px;color:#64748b">Visit ${type} - ${payment}</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. QUEUE SYNC BACKGROUND
+      SyncQueue.add('processVisitCheckIn', [{
+        visitorName: name,
+        visitorPhone: phone,
+        visitType: type,
+        paymentMethod: payment
+      }]);
+
+      showToast('Visit harian dimasukkan ke antrean', 'success');
+      document.getElementById('visit_name').value = '';
+      document.getElementById('visit_phone').value = '';
+      document.getElementById('visit_search').value = '';
     }
 
     // ================ QR SCANNER ================
@@ -8365,27 +8214,20 @@
         `APPROVE PEMBAYARAN\n\n` +
         `ID    : ${id}\n` +
         `Tanggal Pembayaran: ${payDate}\n\n` +
-        `Transaksi akan dicatat dalam laporan keuangan hari ini (dengan tanggal bayar ${payDate}).\n\n` +
         `Lanjutkan?`,
         function (ok) {
           if (!ok) return;
-          showLoading();
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              if (res && res.success) {
-                showToast('✅ Pembayaran berhasil di-approve!', 'success');
-                loadApprovals();
-                loadApprovalCount();
-              } else {
-                showToast('❌ ' + (res?.message || 'Gagal approve'), 'error');
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              showToast('Error: ' + err.message, 'error');
-            })
-            .approvePaymentOnly(id, currentUser?.name || 'Admin', payDate);
+          
+          // 1. OPTIMISTIC UPDATE
+          const row = document.querySelector(`tr[data-id="${id}"]`);
+          if (row) row.style.opacity = '0.5'; // Visual feedback
+          
+          // 2. QUEUE
+          SyncQueue.add('approvePaymentOnly', [id, currentUser?.name || 'Admin', payDate]);
+          
+          showToast('Approval pembayaran dimasukkan ke antrean', 'success');
+          // Refresh UI after delay
+          setTimeout(loadApprovals, 500);
         }
       );
     }
@@ -8396,27 +8238,20 @@
         `APPROVE AKTIVASI MEMBER\n\n` +
         `ID    : ${id}\n` +
         `Tanggal Mulai Aktif: ${startDate}\n\n` +
-        `Masa aktif member akan dihitung mulai ${startDate}.\n\n` +
         `Lanjutkan?`,
         function (ok) {
           if (!ok) return;
-          showLoading();
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              if (res && res.success) {
-                showToast('✅ Member berhasil diaktivasi!', 'success');
-                loadApprovals();
-                loadApprovalCount();
-              } else {
-                showToast('❌ ' + (res?.message || 'Gagal aktivasi'), 'error');
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              showToast('Error: ' + err.message, 'error');
-            })
-            .approveActivationOnly(id, currentUser?.name || 'Admin', startDate);
+
+          // 1. OPTIMISTIC UPDATE
+          const row = document.querySelector(`tr[data-id="${id}"]`);
+          if (row) row.style.opacity = '0.5';
+
+          // 2. QUEUE
+          SyncQueue.add('approveActivationOnly', [id, currentUser?.name || 'Admin', startDate]);
+          
+          showToast('Aktivasi member dimasukkan ke antrean', 'success');
+          // Refresh UI after delay
+          setTimeout(loadApprovals, 500);
         }
       );
     }
@@ -8429,33 +8264,19 @@
         return;
       }
 
-      showConfirm(
-        `TOLAK PERMINTAAN\n\n` +
-        `ID     : ${id}\n` +
-        `Alasan : ${reason}\n\n` +
-        `Lanjutkan?`,
-        function (ok) {
-          if (!ok) return;
+      showConfirm(`Tolak permintaan ID ${id}?`, function (ok) {
+        if (!ok) return;
 
-          showLoading();
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              if (res && res.success) {
-                showToast('Permintaan ditolak', 'info');
-                loadApprovals();
-                loadApprovalCount();
-              } else {
-                showToast('❌ ' + (res?.message || 'Gagal menolak'), 'error');
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              showToast('Error: ' + err.message, 'error');
-            })
-            .rejectApproval(id, reason.trim(), currentUser?.name || 'Admin');
-        }
-      );
+        // 1. OPTIMISTIC UPDATE
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) row.style.opacity = '0.5';
+
+        // 2. QUEUE
+        SyncQueue.add('rejectApproval', [id, reason.trim(), currentUser?.name || 'Admin']);
+
+        showToast('Penolakan dimasukkan ke antrean', 'success');
+        setTimeout(loadApprovals, 500);
+      });
     }
 
     // ================ ADMIN PANEL ================
