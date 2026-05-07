@@ -10116,20 +10116,20 @@
                 <td style="color:#ef4444">Total Operasional / Pengeluaran</td>
                 <td style="text-align:right; color:#ef4444">(${formatCurrency(report.summary.cashOut)})</td>
                 <td style="text-align:right; color:#ef4444">(${formatCurrency(report.summary.transferOut)})</td>
-                <td style="text-align:right; color:#ef4444">-</td>
-                <td style="text-align:right; color:#ef4444">-</td>
+                <td style="text-align:right; color:#ef4444">(${formatCurrency(report.summary.qrisOut)})</td>
+                <td style="text-align:right; color:#ef4444">(${formatCurrency(report.summary.debitOut)})</td>
                 <td style="text-align:right; color:#ef4444"><b>(${formatCurrency(report.summary.totalExpenses)})</b></td>
               </tr>
               <tr class="net-row">
                 <td>SALDO AKHIR (NET)</td>
                 <td style="text-align:right">${formatCurrency(report.summary.netCash)}</td>
                 <td style="text-align:right">${formatCurrency(report.summary.netTransfer)}</td>
-                <td style="text-align:right">${formatCurrency(report.summary.qrisIn)}</td>
-                <td style="text-align:right">${formatCurrency(report.summary.debitIn)}</td>
-                <td style="text-align:right">${formatCurrency(report.summary.totalRevenue - report.summary.totalExpenses)}</td>
+                <td style="text-align:right">${formatCurrency(report.summary.netQris)}</td>
+                <td style="text-align:right">${formatCurrency(report.summary.netDebit)}</td>
+                <td style="text-align:right">${formatCurrency(report.summary.netIncome)}</td>
               </tr>
               <tr class="total-row" style="background: var(--primary); color: white;">
-                <td colspan="3" style="text-align:right; font-weight:800; font-size:16px">SALDO AKHIR GABUNGAN (NET)</td>
+                <td colspan="5" style="text-align:right; font-weight:800; font-size:16px">SALDO AKHIR GABUNGAN (NET)</td>
                 <td style="text-align:right; font-weight:800; font-size:16px">${formatCurrency(report.summary.grandNet)}</td>
               </tr>
             </tbody>
