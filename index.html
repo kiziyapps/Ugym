@@ -3813,7 +3813,12 @@ Selamat berlatih!`;
       // INTEGRASI OPTIMISTIC DATA (SYNC QUEUE) KE DASHBOARD
       const queue = SyncQueue.get();
       let pendingMemberCount = queue.filter(q => q.action === 'registerMember').length;
+      
+      // Hitung Omzet Fitness Pending (Perpanjangan + PT)
       let pendingExtensionRev = queue.filter(q => q.action === 'processTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
+      let pendingPTRev = queue.filter(q => q.action === 'registerPTSession').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
+      let totalPendingFitnessRev = pendingExtensionRev + pendingPTRev;
+
       let pendingPOSRev = queue.filter(q => q.action === 'processPOSTransaction').reduce((sum, q) => sum + (q.args[0]?.total || 0), 0);
       let pendingExpenses = queue.filter(q => q.action === 'saveExpense').reduce((sum, q) => sum + (q.args[0]?.amount || 0), 0);
       let pendingCheckins = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT').length;
@@ -3828,7 +3833,7 @@ Selamat berlatih!`;
       if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = (s.checkins || 0) + pendingCheckins;
       if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
       
-      const totalFitnessRevenue = (s.revenue || 0) + pendingExtensionRev;
+      const totalFitnessRevenue = (s.revenue || 0) + totalPendingFitnessRev;
       if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(totalFitnessRevenue);
 
       // POS Stats
@@ -7963,148 +7968,57 @@ Selamat berlatih!`;
         function (ok) {
           if (!ok) return;
 
-          const btn = document.getElementById('btnRegPT');
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
-          btn.disabled = true;
-          showLoading();
-
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              btn.innerHTML = '<i class="fas fa-save"></i> Registrasi PT';
-              btn.disabled = false;
-
-              const resultEl = document.getElementById('ptResult');
-              if (!resultEl) return;
-
-              if (res && res.success) {
-                const checkinTime = new Date();
-                const daysLeft = res.expiryDate ? Math.ceil((new Date(res.expiryDate) - new Date()) / 86400000) : 0;
-
-                resultEl.className = 'result-card success';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
-                    <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-check"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#166534;margin:0 0 4px 0">✅ Berhasil</h3>
-                      <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
-                    </div>
-                  </div>
-                  
-                  <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:14px">
-                      <div>
-                        <span style="color:#64748b">Member</span><br>
-                        <b>${escapeHtml(ptSelectedMember.fullName)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Trainer</span><br>
-                        <b>${escapeHtml(trainer)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Sesi</span><br>
-                        <b>${sessions}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Sisa Sesi</span><br>
-                        <b>${res.sessionsLeft || sessions}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Berlaku s/d</span><br>
-                        <b>${formatDate(res.expiryDate)}</b>
-                      </div>
-                      <div>
-                        <span style="color:#64748b">Sisa Hari</span><br>
-                        <b style="color:${daysLeft <= 7 ? '#f59e0b' : '#22c55e'}">${daysLeft} hari</b>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div class="payment-info" style="margin:12px 0">
-                    <h4 style="margin-bottom:12px;color:#334155"><i class="fas fa-credit-card"></i> Informasi Pembayaran</h4>
-                    <div class="payment-row">
-                      <span>Total</span>
-                      <span>${formatCurrency(res.totalAmount || total)}</span>
-                    </div>
-                    <div class="payment-row">
-                      <span>Metode</span>
-                      <span><b>${escapeHtml(payment)}</b></span>
-                    </div>
-                    <div class="payment-row">
-                      <span>No. Transaksi</span>
-                      <span><code>${escapeHtml(res.receiptNumber || '-')}</code></span>
-                    </div>
-                  </div>
-                  
-                  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
-                    <button class="btn btn-info btn-sm" onclick="const txt = generateReceiptText('pt', { name:'${ptSelectedMember.fullName}', trainer:'${trainer}', sessions:${sessions}, expiry:'${res.expiryDate}', receipt:'${res.receiptNumber}', total:${res.totalAmount || total}, payment:'${payment}' }); shareToWhatsApp('${ptSelectedMember.phone}', txt)">
-                      <i class="fab fa-whatsapp"></i> Kirim WA
-                    </button>
-                    <button class="btn btn-primary btn-sm" onclick="showView('pt')">
-                      <i class="fas fa-plus"></i> Selesai
-                    </button>
-                  </div>
-                `;
-
-                ptSelectedMember = null;
-                document.getElementById('pt_memberId').value = '';
-                document.getElementById('ptMemberInfo').innerHTML = '<div style="text-align:center;color:#94a3b8"><i class="fas fa-info-circle fa-2x" style="margin-bottom:8px;display:block"></i><p>Belum ada member dipilih.</p></div>';
-                document.getElementById('pt_trainer').value = '';
-                document.getElementById('pt_sessions').value = '10';
-                document.getElementById('pt_price').value = '150000';
-                document.getElementById('pt_payment').selectedIndex = 0;
-                updatePTSummary();
-                loadActivePTSessions();
-
-                resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              } else {
-                resultEl.className = 'result-card error';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                    <div style="background:#ef4444;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-times"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#991b1b;margin:0 0 4px 0">❌ ${escapeHtml(res?.message || 'Gagal registrasi PT')}</h3>
-                      <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                    </div>
-                  </div>
-                `;
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              btn.innerHTML = '<i class="fas fa-save"></i> Registrasi PT';
-              btn.disabled = false;
-
-              const resultEl = document.getElementById('ptResult');
-              if (resultEl) {
-                resultEl.className = 'result-card error';
-                resultEl.style.display = 'block';
-                resultEl.innerHTML = `
-                  <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-                    <div style="background:#ef4444;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px">
-                      <i class="fas fa-times"></i>
-                    </div>
-                    <div>
-                      <h3 style="color:#991b1b;margin:0 0 4px 0">❌ Error: ${escapeHtml(err.message)}</h3>
-                      <p style="color:#991b1b;opacity:0.8;margin:0;font-size:13px">${formatDateTime(new Date())}</p>
-                    </div>
-                  </div>
-                `;
-              }
-            })
-            .registerPTSession({
+          // Add to Sync Queue
+          SyncQueue.add('registerPTSession', [
+            {
               memberId: ptSelectedMember.memberId,
               trainerName: trainer,
               totalSessions: sessions,
               pricePerSession: price,
+              totalAmount: total, // Penting untuk dashboard revenue
               paymentMethod: payment
-            }, currentUser?.name || 'Admin');
+            },
+            currentUser?.name || 'Admin'
+          ]);
+
+          hideLoading();
+          showToast('Registrasi PT dimasukkan ke antrean', 'success');
+          
+          // Reset Form
+          ptSelectedMember = null;
+          if (document.getElementById('pt_memberId')) document.getElementById('pt_memberId').value = '';
+          if (document.getElementById('ptMemberInfo')) {
+            document.getElementById('ptMemberInfo').innerHTML = '<div style="text-align:center;color:#94a3b8"><i class="fas fa-info-circle fa-2x" style="margin-bottom:8px;display:block"></i><p>Belum ada member dipilih.</p></div>';
+          }
+          if (document.getElementById('pt_trainer')) document.getElementById('pt_trainer').value = '';
+          if (document.getElementById('pt_sessions')) document.getElementById('pt_sessions').value = '10';
+          if (document.getElementById('pt_price')) document.getElementById('pt_price').value = '150000';
+          if (document.getElementById('pt_payment')) document.getElementById('pt_payment').selectedIndex = 0;
+          
+          updatePTSummary();
+          loadActivePTSessions();
+          
+          // Tampilkan pesan sukses sementara (Optimistic)
+          const resultEl = document.getElementById('ptResult');
+          if (resultEl) {
+            resultEl.className = 'result-card success';
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = `
+              <div style="display:flex;align-items:center;gap:16px">
+                <div style="background:#22c55e;color:white;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center">
+                  <i class="fas fa-check"></i>
+                </div>
+                <div>
+                  <h4 style="margin:0;color:#166534">Registrasi PT Berhasil (Antrean)</h4>
+                  <p style="margin:0;font-size:12px;color:#166534">Data akan segera disinkronkan ke server.</p>
+                </div>
+              </div>
+            `;
+            setTimeout(() => { resultEl.style.display = 'none'; }, 5000);
+            resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+    }
         }
       );
     }
