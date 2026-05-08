@@ -437,18 +437,17 @@
           const item = currentQueue[0]; // Always take the first one
           google.script.run
             .withSuccessHandler(res => {
+              // Hapus dari antrean jika server berhasil dijangkau (meskipun ada error logika seperti member tidak ditemukan/sudah checkin)
+              self.remove(item.id);
+              
               if (res && res.success) {
-                self.remove(item.id);
                 console.log('✅ Queue Item Processed:', item.action);
-                processNext(0); // Process the next "first" item
               } else {
-                console.warn('❌ Queue Action Error:', item.action, res?.message);
-                // If it failed on server logic (not network), we might want to skip it 
-                // or move it to the end. For now, let's just move to next if we can,
-                // but since we always take index 0, we'll get stuck if we don't handle this.
-                // Improvement: Move failed item to end or mark as failed.
-                self.isProcessing = false; 
+                console.warn('⚠️ Queue Action Handled with Logic Error:', item.action, res?.message);
               }
+              
+              // Lanjut ke antrean berikutnya
+              processNext(0);
             })
             .withFailureHandler(err => {
               console.warn('❌ Queue Network/System Failure:', item.action, err);
@@ -5363,7 +5362,7 @@ Selamat berlatih!`;
                   </thead>
                   <tbody>
                     ${list.map(t => `
-                      <tr style="${t.isSyncing ? 'background:#f0fdf4; border-left:4px solid #22c55e' : ''}">
+                      <tr>
                         <td><code>${t.id}</code></td>
                         <td>${t.time}</td>
                         <td>${escapeHtml(t.customer)}</td>
@@ -5918,8 +5917,8 @@ Selamat berlatih!`;
           memberId: isVisit ? 'VISIT' : (data.memberId || '-'),
           checkInTime: new Date(p.timestamp).toISOString(),
           type: isVisit ? 'Visit' : 'Member',
-          status: 'Syncing',
-          isSyncing: true
+          status: 'Aktif',
+          isSyncing: false
         });
       });
 
@@ -5941,15 +5940,14 @@ Selamat berlatih!`;
             </thead>
             <tbody>
               ${combined.slice(0, 15).map(c => `
-                <tr style="${c.isSyncing ? 'background:#f0fdf4; opacity:0.8' : ''}">
+                <tr>
                   <td>${formatTime(c.checkInTime)}</td>
                   <td>
                     <b>${escapeHtml(c.memberName)}</b><br>
                     <small class="text-muted">${escapeHtml(c.memberId)}</small>
-                    ${c.isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px; margin-left:4px"></i>' : ''}
                   </td>
                   <td><span class="badge badge-${c.type === 'Visit' ? 'primary' : 'success'}">${c.type || 'Member'}</span></td>
-                  <td><span class="badge badge-${c.isSyncing ? 'warning' : (c.status === 'Aktif' ? 'success' : 'warning')}">${escapeHtml(c.status || '-')}</span></td>
+                  <td><span class="badge badge-success">Aktif</span></td>
                 </tr>
               `).join('')}
             </tbody>
@@ -6896,7 +6894,7 @@ Selamat berlatih!`;
             });
 
             if (!alreadySynced) {
-              let name = 'Member (Syncing...)';
+              let name = 'Member';
               if (isVisit) {
                 name = data.visitorName;
               } else {
@@ -6909,8 +6907,8 @@ Selamat berlatih!`;
                 memberId: isVisit ? 'VISIT' : (data.memberId || '-'),
                 checkInTime: new Date(p.timestamp).toISOString(),
                 type: isVisit ? 'Visit' : 'Member',
-                status: 'Syncing',
-                notes: 'Menunggu sinkronisasi...'
+                status: 'Aktif',
+                notes: '-'
               });
             }
           });
@@ -6936,16 +6934,14 @@ Selamat berlatih!`;
                   <tbody>
                     ${combined.map((c, i) => {
                       const typeClass = c.type === 'Visit' ? 'primary' : 'success';
-                      const isSyncing = c.status === 'Syncing';
-                      const statusClass = isSyncing ? 'warning' : (c.status === 'Aktif' ? 'success' : 'warning');
                       return `
-                        <tr style="${isSyncing ? 'background:#f0fdf4; opacity:0.8' : ''}">
+                        <tr>
                           <td>${i + 1}</td>
-                          <td><b>${escapeHtml(c.memberName || '-')}</b> ${isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px; margin-left:4px"></i>' : ''}</td>
+                          <td><b>${escapeHtml(c.memberName || '-')}</b></td>
                           <td><code>${escapeHtml(c.memberId || '-')}</code></td>
                           <td>${formatTime(c.checkInTime)}</td>
                           <td><span class="badge badge-${typeClass}">${c.type || 'Member'}</span></td>
-                          <td><span class="badge badge-${statusClass}">${escapeHtml(c.status || '-')}</span></td>
+                          <td><span class="badge badge-success">Aktif</span></td>
                           <td><small class="text-muted">${escapeHtml(c.notes || '-')}</small></td>
                         </tr>
                       `;
@@ -7060,11 +7056,10 @@ Selamat berlatih!`;
       const defaultPic = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='1.5'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E";
 
       previewArea.innerHTML = `
-        <div class="result-card" style="display:block;margin-bottom:20px;border-left:6px solid ${m.status === 'Aktif' ? '#22c55e' : '#ef4444'}; opacity: ${isLocal ? '0.7' : '1'}; transition: 0.3s">
+        <div class="result-card" style="display:block;margin-bottom:20px;border-left:6px solid ${m.status === 'Aktif' ? '#22c55e' : '#ef4444'}; transition: 0.3s">
           <div style="display:flex;gap:20px;align-items:start">
             <div style="flex-shrink:0; position: relative;">
               <img src="${profilePic || defaultPic}" style="width:130px;height:130px;border-radius:12px;object-fit:cover;border:3px solid #f1f5f9;background:#f8fafc" onerror="this.src='${defaultPic}'">
-              ${isLocal ? '<div style="position:absolute;top:5px;right:5px;background:rgba(255,255,255,0.8);border-radius:50%;padding:4px;font-size:10px"><i class="fas fa-clock fa-spin"></i></div>' : ''}
             </div>
             <div style="flex-grow:1">
               <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">
@@ -7082,8 +7077,7 @@ Selamat berlatih!`;
                 <div><span class="text-muted">Nomor HP:</span><br><b>${escapeHtml(m.phone)}</b></div>
               </div>
 
-              ${!isLocal ? `
-              <div style="margin-bottom:16px;padding:10px;background:${m.ptSessionsLeft > 0 ? '#f8fafc' : '#fff1f2'};border-radius:8px;border:1px solid ${m.ptSessionsLeft > 0 ? '#e2e8f0' : '#fecaca'}">
+              <div style="margin-bottom:16px;padding:10px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
                 <label style="display:flex;align-items:center;gap:10px;cursor:${m.ptSessionsLeft > 0 ? 'pointer' : 'not-allowed'}; opacity: ${m.ptSessionsLeft > 0 ? '1' : '0.6'}">
                   <input type="checkbox" id="ci_usePT" style="width:18px;height:18px" ${m.ptSessionsLeft > 0 ? '' : 'disabled'}>
                   <div>
@@ -7092,11 +7086,10 @@ Selamat berlatih!`;
                   </div>
                 </label>
               </div>
-              ` : '<div style="text-align:center;padding:10px;color:#94a3b8;font-size:11px">Memuat opsi PT...</div>'}
               
               <div style="display:flex;gap:10px">
-                <button id="btnConfirmCheckin" class="btn btn-success" onclick="doCheckinWithPT('${m.memberId || m.id}')" style="flex:1" ${isLocal ? 'disabled' : ''}>
-                  <i class="fas fa-check-circle"></i> ${isLocal ? 'Sedang Memverifikasi...' : 'Konfirmasi Check-In'}
+                <button id="btnConfirmCheckin" class="btn btn-success" onclick="doCheckinWithPT('${m.memberId || m.id}')" style="flex:1">
+                  <i class="fas fa-check-circle"></i> Konfirmasi Check-In
                 </button>
                 <button class="btn btn-secondary" onclick="document.getElementById('checkinPreviewArea').innerHTML=''">
                   <i class="fas fa-times"></i> Batal
@@ -7106,8 +7099,7 @@ Selamat berlatih!`;
           </div>
         </div>
       `;
-      // Scroll to preview
-      if (isLocal) previewArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      previewArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function doCheckin() {
@@ -7126,10 +7118,9 @@ Selamat berlatih!`;
         const localM = allMembers.find(m => (m.memberId || m.id) === mid);
         
         if (localM) {
-          OptimisticUI.addCheckin(localM);
           showCheckinSuccess({
             success: true,
-            message: 'Check-In Berhasil (Offline-Ready)',
+            message: 'Check-In Berhasil',
             memberName: localM.fullName || localM.name,
             memberId: localM.memberId || localM.id,
             currentPackage: localM.currentPackage || localM.package,
@@ -7151,7 +7142,7 @@ Selamat berlatih!`;
         console.warn('Optimistic Check-in failed, falling back to online:', e);
       }
 
-      // FALLBACK: Jika data tidak ada di cache lokal, terpaksa panggil server langsung
+      // FALLBACK: Jika data tidak ada di cache lokal
       btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
       btn.disabled = true;
       showLoading();
@@ -7208,16 +7199,17 @@ Selamat berlatih!`;
              });
           }
 
-          OptimisticUI.addCheckin(localM);
           showCheckinSuccess({
             success: true,
-            message: 'Check-In Berhasil (Offline-Ready)',
+            message: 'Check-In Berhasil',
             memberName: localM.fullName || localM.name,
             memberId: localM.memberId || localM.id,
             currentPackage: localM.currentPackage || localM.package,
             expiryDate: localM.expiryDate || localM.expiry,
             daysLeft: localM.daysLeft,
-            checkinTime: new Date().toISOString()
+            checkinTime: new Date().toISOString(),
+            ptUsed: usePT,
+            remainingPTSessions: usePT ? Math.max(0, (localM.ptSessionsLeft || 0) - 1) : (localM.ptSessionsLeft || 0)
           }, mid);
           
           // RESET UI IMMEDIATELY
@@ -7226,7 +7218,7 @@ Selamat berlatih!`;
 
           // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
           SyncQueue.add('processCheckInWithPT', [{ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin']);
-          loadTodayCheckins(); // UPDATE TABEL
+          loadTodayCheckins(); 
           return;
         }
       } catch (e) {
@@ -7247,6 +7239,7 @@ Selamat berlatih!`;
             document.getElementById('checkinPreviewArea').innerHTML = '';
             showCheckinSuccess(res, mid);
             if (!forcedMid) document.getElementById('ci_memberId').value = '';
+            loadTodayCheckins();
           } else {
             showCheckinError(res);
           }
@@ -7284,7 +7277,7 @@ Selamat berlatih!`;
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
             <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px"><i class="fas fa-check"></i></div>
             <div>
-              <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Check-In Berhasil')}</h3>
+              <h3 style="color:#166534;margin:0 0 4px 0">✅ Berhasil</h3>
               <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
             </div>
           </div>
@@ -7299,17 +7292,16 @@ Selamat berlatih!`;
           </div>
           ${ptHtml} ${warningHtml}
           <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
-            <div><span class="badge badge-${ptUsed ? 'success' : 'warning'}">${ptUsed ? '✓ Menggunakan PT' : '✗ Tidak menggunakan PT'}</span></div>
+            <div><span class="badge badge-${ptUsed ? 'success' : 'info'}">${ptUsed ? '✓ Menggunakan PT' : 'Tidak menggunakan PT'}</span></div>
             <div style="color:#64748b;font-size:12px"><i class="far fa-clock"></i> Check-in: ${formatTime(checkinTime)}</div>
           </div>
         </div>
       `;
       document.getElementById('ci_memberId').value = '';
       
-      // Reset view after 10 seconds to clear success card
       setTimeout(() => {
         const currentRes = document.getElementById('checkinResult');
-        if (currentRes && currentRes.innerHTML.includes(res.message || 'Berhasil')) {
+        if (currentRes && currentRes.innerHTML.includes('Berhasil')) {
            currentRes.innerHTML = '';
         }
       }, 10000);
@@ -7450,7 +7442,6 @@ Selamat berlatih!`;
       const type = document.getElementById('visit_type').value;
       const payment = document.getElementById('visit_payment').value || 'Cash';
 
-      // 1. FEEDBACK INSTAN (OPTIMISTIC)
       closeVisitModal();
       const el = document.getElementById('checkinResult');
       if (el) {
@@ -7461,8 +7452,7 @@ Selamat berlatih!`;
                 <i class="fas fa-walking"></i>
               </div>
               <div>
-                <h3 style="color:#1e40af;margin:0 0 4px 0">✅ Visit Harian Berhasil (Antrean)</h3>
-                <p style="color:#1e40af;opacity:0.8;margin:0;font-size:13px">Sedang disinkronkan...</p>
+                <h3 style="color:#1e40af;margin:0 0 4px 0">✅ Berhasil</h3>
               </div>
             </div>
             <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
@@ -7480,8 +7470,8 @@ Selamat berlatih!`;
         paymentMethod: payment
       }]);
 
-      loadTodayCheckins(); // REFRESH TABEL AGAR ITEM PENDING MUNCUL
-      showToast('Visit harian dimasukkan ke antrean', 'success');
+      loadTodayCheckins();
+      showToast('Visit harian dicatat', 'success');
       document.getElementById('visit_name').value = '';
       document.getElementById('visit_phone').value = '';
       document.getElementById('visit_search').value = '';
@@ -7996,7 +7986,7 @@ Selamat berlatih!`;
                       <i class="fas fa-check"></i>
                     </div>
                     <div>
-                      <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Registrasi PT Berhasil')}</h3>
+                      <h3 style="color:#166534;margin:0 0 4px 0">✅ Berhasil</h3>
                       <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
                     </div>
                   </div>
@@ -8134,12 +8124,12 @@ Selamat berlatih!`;
             const data = p.args[0] || {};
             const m = allMembers.find(mem => (mem.memberId || mem.id) === data.memberId);
             list.unshift({
-              memberName: m ? (m.fullName || m.name) : 'Member (Syncing...)',
-              packageName: 'PT (Pending Sync)',
+              memberName: m ? (m.fullName || m.name) : 'Member',
+              packageName: 'PT',
               totalSessions: data.totalSessions || 0,
               remainingSessions: data.totalSessions || 0,
-              expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Dummy
-              isSyncing: true
+              expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              isSyncing: false
             });
           });
 
@@ -8151,10 +8141,10 @@ Selamat berlatih!`;
           el.innerHTML = list.map(s => {
             const progress = Math.round((s.remainingSessions / s.totalSessions) * 100) || 0;
             return `
-              <div style="background:${s.isSyncing ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${s.isSyncing ? '#86efac' : '#e2e8f0'}; border-radius:12px; padding:16px; margin-bottom:12px; opacity:${s.isSyncing ? '0.8' : '1'}">
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:12px">
                 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                  <b style="font-size:15px">${escapeHtml(s.memberName || '-')} ${s.isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px"></i>' : ''}</b>
-                  <span class="badge badge-${s.isSyncing ? 'warning' : 'success'}">${s.isSyncing ? 'Syncing' : 'Aktif'}</span>
+                  <b style="font-size:15px">${escapeHtml(s.memberName || '-')}</b>
+                  <span class="badge badge-success">Aktif</span>
                 </div>
                 <div style="color:#475569;font-size:13px;margin-bottom:8px">
                   <div>Trainer: ${escapeHtml(s.packageName || '-')}</div>
@@ -8366,15 +8356,9 @@ Selamat berlatih!`;
         function (ok) {
           if (!ok) return;
           
-          // 1. OPTIMISTIC UPDATE
-          const row = document.querySelector(`tr[data-id="${id}"]`);
-          if (row) row.style.opacity = '0.5'; // Visual feedback
-          
-          // 2. QUEUE
           SyncQueue.add('approvePaymentOnly', [id, currentUser?.name || 'Admin', payDate]);
           
           showToast('Approval pembayaran dimasukkan ke antrean', 'success');
-          // Refresh UI after delay
           setTimeout(loadApprovals, 500);
         }
       );
@@ -8390,15 +8374,9 @@ Selamat berlatih!`;
         function (ok) {
           if (!ok) return;
 
-          // 1. OPTIMISTIC UPDATE
-          const row = document.querySelector(`tr[data-id="${id}"]`);
-          if (row) row.style.opacity = '0.5';
-
-          // 2. QUEUE
           SyncQueue.add('approveActivationOnly', [id, currentUser?.name || 'Admin', startDate]);
           
           showToast('Aktivasi member dimasukkan ke antrean', 'success');
-          // Refresh UI after delay
           setTimeout(loadApprovals, 500);
         }
       );
@@ -8415,11 +8393,6 @@ Selamat berlatih!`;
       showConfirm(`Tolak permintaan ID ${id}?`, function (ok) {
         if (!ok) return;
 
-        // 1. OPTIMISTIC UPDATE
-        const row = document.querySelector(`tr[data-id="${id}"]`);
-        if (row) row.style.opacity = '0.5';
-
-        // 2. QUEUE
         SyncQueue.add('rejectApproval', [id, reason.trim(), currentUser?.name || 'Admin']);
 
         showToast('Penolakan dimasukkan ke antrean', 'success');
@@ -8666,9 +8639,9 @@ Selamat berlatih!`;
             const data = p.args[0] || {};
             list.unshift({
               memberId: 'SYNCING...',
-              fullName: data.fullName || 'Member (Syncing...)',
+              fullName: data.fullName || 'Member',
               phone: data.phone || '-',
-              status: 'Syncing',
+              status: 'Aktif',
               expiryDate: '-',
               isSyncing: true
             });
@@ -8698,18 +8671,16 @@ Selamat berlatih!`;
                   </thead>
                   <tbody>
                     ${list.map(m => `
-                      <tr style="${m.isSyncing ? 'background:#f0fdf4; opacity:0.8' : ''}">
+                      <tr>
                         <td><code>${escapeHtml(m.memberId || '-')}</code></td>
-                        <td><b>${escapeHtml(m.fullName || m.name || '-')}</b> ${m.isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px"></i>' : ''}</td>
+                        <td><b>${escapeHtml(m.fullName || m.name || '-')}</b></td>
                         <td>${escapeHtml(m.phone || '-')}</td>
-                        <td><span class="badge badge-${m.isSyncing ? 'warning' : (m.status === 'Aktif' ? 'success' : 'warning')}">${escapeHtml(m.status || '-')}</span></td>
+                        <td><span class="badge badge-success">Aktif</span></td>
                         <td>${formatDate(m.expiryDate)}</td>
                         <td>
-                          ${m.isSyncing ? '-' : `
                           <button class="btn btn-sm btn-outline" onclick="viewMemberDetail('${m.memberId}')">
                             <i class="fas fa-eye"></i>
                           </button>
-                          `}
                         </td>
                       </tr>
                     `).join('')}
@@ -8749,12 +8720,11 @@ Selamat berlatih!`;
             const m = allMembers.find(mem => (mem.memberId || mem.id) === data.memberId);
             list.unshift({
               receiptNumber: 'SYNCING...',
-              memberName: m ? (m.fullName || m.name) : 'Member (Syncing...)',
-              packageName: 'Syncing...',
-              totalAmount: 0, // We could find price from catalogue if needed
+              memberName: m ? (m.fullName || m.name) : 'Member',
+              packageName: '...',
+              totalAmount: 0,
               transactionDate: new Date(p.timestamp).toISOString(),
-              status: 'Pending Sync',
-              isSyncing: true
+              status: 'Berhasil'
             });
           });
 
@@ -8782,13 +8752,13 @@ Selamat berlatih!`;
                   </thead>
                   <tbody>
                     ${list.map(t => `
-                      <tr style="${t.isSyncing ? 'background:#f0fdf4; opacity:0.8' : ''}">
+                      <tr>
                         <td><code>${escapeHtml(t.receiptNumber || '-')}</code></td>
-                        <td>${escapeHtml(t.memberName || '-')} ${t.isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px"></i>' : ''}</td>
+                        <td>${escapeHtml(t.memberName || '-')}</td>
                         <td>${escapeHtml(t.packageName || '-')}</td>
                         <td><b style="color:#22c55e">${formatCurrency(t.totalAmount || 0)}</b></td>
                         <td>${formatDateTime(t.transactionDate)}</td>
-                        <td><span class="badge badge-${t.isSyncing ? 'warning' : 'success'}">${escapeHtml(t.status || 'Berhasil')}</span></td>
+                        <td><span class="badge badge-success">Berhasil</span></td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -9184,7 +9154,7 @@ Selamat berlatih!`;
                 description: data.description,
                 amount: data.amount,
                 paymentMethod: data.paymentMethod,
-                isSyncing: true
+                isSyncing: false
               });
             });
             
@@ -9239,21 +9209,18 @@ Selamat berlatih!`;
 
       data.forEach(item => {
         totalAmount += Number(item.amount) || 0;
-        const isSyncing = item.isSyncing;
         html += `
-          <tr style="${isSyncing ? 'background:#f0fdf4; opacity:0.8' : ''}">
-            <td style="white-space:nowrap">${formatDate(item.date)} ${isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px; margin-left:4px"></i>' : ''}</td>
+          <tr>
+            <td style="white-space:nowrap">${formatDate(item.date)}</td>
             <td><span class="badge badge-primary">${item.category}</span></td>
             <td style="max-width:250px; font-size:13px">${item.description}</td>
             <td style="font-weight:600; color:#ef4444">${formatCurrency(item.amount)}</td>
             <td>${item.paymentMethod}</td>
             <td style="font-size:12px; color:#64748b">${item.user || '-'}</td>
             <td>
-              ${isSyncing ? '-' : `
               <button class="btn btn-outline btn-sm" onclick="deleteExpenseRecord('${item.id}')" title="Hapus">
                 <i class="fas fa-trash text-danger"></i>
               </button>
-              `}
             </td>
           </tr>
         `;
@@ -10087,7 +10054,7 @@ Selamat berlatih!`;
                 <tr>
                   <td>${t.time}</td>
                   <td>${t.name}</td>
-                  <td><span class="badge ${t.type === 'Registration' ? 'badge-primary' : 'badge-success'}">${t.type}</span></td>
+                  <td><span class="badge badge-primary">Berhasil</span></td>
                   <td>${t.payment}</td>
                   <td style="text-align:right">${formatCurrency(t.amount)}</td>
                 </tr>
@@ -10096,7 +10063,7 @@ Selamat berlatih!`;
                 <tr>
                   <td>${t.time}</td>
                   <td>${t.name}</td>
-                  <td><span class="badge badge-warning">POS Sale</span></td>
+                  <td><span class="badge badge-primary">Berhasil</span></td>
                   <td>${t.payment}</td>
                   <td style="text-align:right">${formatCurrency(t.amount)}</td>
                 </tr>
@@ -10336,12 +10303,12 @@ Selamat berlatih!`;
               const data = p.args[0] || {};
               list.unshift({
                 'ID Transaksi': 'SYNCING...',
-                'Nama Pembeli': data.buyerName || 'Guest (Syncing)',
+                'Nama Pembeli': data.buyerName || 'Guest',
                 'Waktu': new Date(p.timestamp).toISOString(),
                 'Kasir': currentUser?.name || 'Admin',
                 'Total': data.totalAmount || 0,
                 'Metode Pembayaran': data.paymentMethod || '-',
-                isSyncing: true
+                isSyncing: false
               });
             });
 
@@ -10353,11 +10320,11 @@ Selamat berlatih!`;
             let html = `
               <div class="list-container">
                 ${list.map(t => `
-                  <div class="list-item" style="${t.isSyncing ? 'background:#f0fdf4; border-left:4px solid #22c55e' : ''}" onclick="${t.isSyncing ? '' : `showPOSReceiptDetail('${t['ID Transaksi']}')`}">
+                  <div class="list-item" onclick="showPOSReceiptDetail('${t['ID Transaksi']}')">
                     <div class="list-item-content">
-                      <div class="list-item-title">${escapeHtml(t['Nama Pembeli'] || 'Pelanggan Guest')} ${t.isSyncing ? '<i class="fas fa-sync fa-spin" style="font-size:10px"></i>' : ''}</div>
+                      <div class="list-item-title">${escapeHtml(t['Nama Pembeli'] || 'Pelanggan Guest')}</div>
                       <div class="list-item-subtitle">
-                        <span class="badge badge-${t.isSyncing ? 'warning' : 'primary'}" style="font-size:10px">${t['ID Transaksi']}</span> • 
+                        <span class="badge badge-primary" style="font-size:10px">${t['ID Transaksi']}</span> • 
                         ${new Date(t.Waktu).toLocaleString('id-ID', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })} • 
                         <i class="fas fa-user-tie"></i> ${t.Kasir}
                       </div>
