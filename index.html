@@ -3813,9 +3813,9 @@ Selamat berlatih!`;
       // INTEGRASI OPTIMISTIC DATA (SYNC QUEUE) KE DASHBOARD
       const queue = SyncQueue.get();
       let pendingMemberCount = queue.filter(q => q.action === 'registerMember').length;
-      let pendingExtensionRev = queue.filter(q => q.action === 'processExtension').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
-      let pendingPOSRev = queue.filter(q => q.action === 'processPOSTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
-      let pendingExpenses = queue.filter(q => q.action === 'addExpense').reduce((sum, q) => sum + (q.args[0]?.amount || 0), 0);
+      let pendingExtensionRev = queue.filter(q => q.action === 'processTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
+      let pendingPOSRev = queue.filter(q => q.action === 'processPOSTransaction').reduce((sum, q) => sum + (q.args[0]?.total || 0), 0);
+      let pendingExpenses = queue.filter(q => q.action === 'saveExpense').reduce((sum, q) => sum + (q.args[0]?.amount || 0), 0);
       let pendingCheckins = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT').length;
 
       // Fitness Stats
@@ -5177,12 +5177,15 @@ Selamat berlatih!`;
         }
 
         // 2. QUEUE
-        SyncQueue.add('processExtension', [{
-          memberId: mid,
-          packageId: pkgEl.value,
-          paymentMethod: payment,
-          user: currentUser?.name || 'Admin'
-        }]);
+        SyncQueue.add('processTransaction', [
+          {
+            memberId: mid,
+            packageId: pkgEl.value,
+            paymentMethod: payment,
+            totalAmount: price // Untuk perhitungan omzet di dashboard
+          },
+          currentUser?.name || 'Admin'
+        ]);
         
         showToast('Transaksi dimasukkan ke antrean', 'success');
       });
@@ -8712,7 +8715,7 @@ Selamat berlatih!`;
 
           // MERGE PENDING TRANSACTIONS (OPTIMISTIC)
           const queue = SyncQueue.get();
-          const pending = queue.filter(q => q.action === 'processExtension');
+          const pending = queue.filter(q => q.action === 'processTransaction');
           const allMembers = LocalCache.get('all_members') || [];
 
           pending.forEach(p => {
