@@ -3842,6 +3842,10 @@ Selamat berlatih!`;
 
       const netProfit = (totalFitnessRevenue + totalPOSRevenue) - totalExpenses;
       if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(netProfit);
+      
+      // Update Detailed Net Profits (Server data + optimistic estimates)
+      if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency((s.fitnessNetProfit || 0) + pendingExtensionRev);
+      if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency((s.posNetProfit || 0) + (pendingPOSRev * 0.2)); // 20% margin estimate for pending
 
       // Hide financial stats for Staff & Kasir
       if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
@@ -4012,30 +4016,6 @@ Selamat berlatih!`;
 
 
     // ================ GALLERY ================
-    function checkinMember(memberId) {
-      // Update Local Cache Optimistically
-      LocalCache.update('all_members', (members) => {
-        const idx = members.findIndex(m => m.memberId === memberId);
-        if (idx !== -1) {
-          members[idx].status = 'Aktif'; 
-        }
-        return members;
-      });
-
-      // Add to Sync Queue (Background Processing)
-      SyncQueue.add('processCheckin', [memberId]);
-      
-      showToast('Check-In Berhasil (Antrean)', 'success');
-      
-      // Render Preview local state
-      const localMember = localSearchMember(memberId);
-      if(localMember && localMember.length > 0) {
-        renderCheckinProfile(localMember[0], true); // true = isLocal/pending sync
-      }
-      
-      document.getElementById('checkinId').value = '';
-    }
-
     function loadGalleryView() {
       showLoading();
       google.script.run
@@ -5341,7 +5321,25 @@ Selamat berlatih!`;
       google.script.run
         .withSuccessHandler(function (res) {
           if (res && res.success) {
-            const list = res.transactions || [];
+            let list = res.transactions || [];
+            
+            // INTEGRASI DATA LOKAL (OPTIMISTIC UI)
+            const queue = SyncQueue.get();
+            const pending = queue.filter(q => q.action === 'processPOSTransaction');
+            
+            pending.forEach(p => {
+              const data = p.args[0] || {};
+              list.unshift({
+                id: 'SYNCING...',
+                time: formatTime(new Date(p.timestamp)),
+                customer: data.customerName || 'Guest (Syncing)',
+                total: data.total || 0,
+                payment: data.paymentMethod || '-',
+                cashier: data.cashier || 'Admin',
+                isSyncing: true
+              });
+            });
+
             if (list.length === 0) {
               el.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8">Belum ada transaksi hari ini</div>';
               return;
@@ -5356,16 +5354,18 @@ Selamat berlatih!`;
                       <th>Waktu</th>
                       <th>Pelanggan</th>
                       <th>Total</th>
+                      <th>Pembayaran</th>
                       <th>Kasir</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${list.map(t => `
-                      <tr>
+                      <tr style="${t.isSyncing ? 'background:#f0fdf4; border-left:4px solid #22c55e' : ''}">
                         <td><code>${t.id}</code></td>
                         <td>${t.time}</td>
                         <td>${escapeHtml(t.customer)}</td>
                         <td><b>${formatCurrency(t.total)}</b></td>
+                        <td><span class="badge badge-outline" style="font-size:10px">${escapeHtml(t.payment)}</span></td>
                         <td><small>${t.cashier}</small></td>
                       </tr>
                     `).join('')}
@@ -5647,8 +5647,8 @@ Selamat berlatih!`;
           return { ...s, posRevenue: (s.posRevenue || 0) + payload.total, posCount: (s.posCount || 0) + 1 };
         });
 
-        // IMPROVEMENT 3: Local Receipt Preview
-        ReceiptGenerator.showPreview(payload, 'pos');
+        // IMPROVEMENT 3: Local Receipt Preview (Removed by user request)
+        // ReceiptGenerator.showPreview(payload, 'pos');
 
         // Add to Sync Queue
         SyncQueue.add('processPOSTransaction', [payload]);
@@ -7134,12 +7134,15 @@ Selamat berlatih!`;
             daysLeft: localM.daysLeft,
             checkinTime: new Date().toISOString()
           }, mid);
+          
+          // RESET UI IMMEDIATELY
           document.getElementById('ci_memberId').value = '';
+          document.getElementById('checkinPreviewArea').innerHTML = '';
           
           // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
           SyncQueue.add('processCheckIn', [{ memberId: mid }, currentUser?.name || 'Admin']);
-          loadTodayCheckins(); // UPDATE TABEL
-          return; // Selesai, biarkan SyncQueue bekerja di belakang
+          loadTodayCheckins(); 
+          return;
         }
       } catch (e) {
         console.warn('Optimistic Check-in failed, falling back to online:', e);
@@ -7156,6 +7159,7 @@ Selamat berlatih!`;
           btn.innerHTML = originalText;
           btn.disabled = false;
           if (res && res.success) {
+            document.getElementById('checkinPreviewArea').innerHTML = '';
             showCheckinSuccess(res, mid);
             document.getElementById('ci_memberId').value = '';
             loadTodayCheckins();
@@ -7213,6 +7217,7 @@ Selamat berlatih!`;
             checkinTime: new Date().toISOString()
           }, mid);
           
+          // RESET UI IMMEDIATELY
           document.getElementById('checkinPreviewArea').innerHTML = '';
           if (!forcedMid) document.getElementById('ci_memberId').value = '';
 
@@ -7297,6 +7302,14 @@ Selamat berlatih!`;
         </div>
       `;
       document.getElementById('ci_memberId').value = '';
+      
+      // Reset view after 10 seconds to clear success card
+      setTimeout(() => {
+        const currentRes = document.getElementById('checkinResult');
+        if (currentRes && currentRes.innerHTML.includes(res.message || 'Berhasil')) {
+           currentRes.innerHTML = '';
+        }
+      }, 10000);
     }
 
     function showCheckinError(res) {
