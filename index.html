@@ -6859,31 +6859,52 @@ Selamat berlatih!`;
           const pending = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT');
           const allMembers = LocalCache.get('all_members') || [];
           
+          // Buat Map untuk cek cepat data server (ID_Waktu)
+          const serverSet = new Set(list.map(c => {
+            const timeKey = c.checkInTime ? new Date(c.checkInTime).getTime() : 0;
+            return (c.memberId || '').toUpperCase() + '_' + timeKey;
+          }));
+
           const combined = [];
-          // Prepend pending items
+          
+          // Tambahkan item pending (Hanya jika belum ada di server)
           pending.forEach(p => {
             const data = p.args[0] || {};
             const isVisit = p.action === 'processVisitCheckIn';
-            let name = 'Member (Syncing...)';
-            if (isVisit) {
-              name = data.visitorName;
-            } else {
-              const m = allMembers.find(mem => (mem.memberId || mem.id) === data.memberId);
-              if (m) name = m.fullName || m.name;
-            }
-
-            combined.push({
-              memberName: name,
-              memberId: isVisit ? 'VISIT' : (data.memberId || '-'),
-              checkInTime: new Date(p.timestamp).toISOString(),
-              type: isVisit ? 'Visit' : 'Member',
-              status: 'Syncing',
-              notes: 'Menunggu sinkronisasi...'
+            const mid = (data.memberId || '').toUpperCase();
+            const timeKey = p.timestamp || 0;
+            
+            // Cek apakah item ini sudah ada di list server (berdasarkan ID dan selisih waktu tipis < 5 detik)
+            let alreadySynced = false;
+            list.forEach(sc => {
+              const scMid = (sc.memberId || '').toUpperCase();
+              const scTime = sc.checkInTime ? new Date(sc.checkInTime).getTime() : 0;
+              if (scMid === mid && Math.abs(scTime - timeKey) < 5000) {
+                alreadySynced = true;
+              }
             });
+
+            if (!alreadySynced) {
+              let name = 'Member (Syncing...)';
+              if (isVisit) {
+                name = data.visitorName;
+              } else {
+                const m = allMembers.find(mem => (mem.memberId || mem.id) === data.memberId);
+                if (m) name = m.fullName || m.name;
+              }
+
+              combined.push({
+                memberName: name,
+                memberId: isVisit ? 'VISIT' : (data.memberId || '-'),
+                checkInTime: new Date(p.timestamp).toISOString(),
+                type: isVisit ? 'Visit' : 'Member',
+                status: 'Syncing',
+                notes: 'Menunggu sinkronisasi...'
+              });
+            }
           });
           
-          // Gabungkan dengan data dari server (hindari duplikat jika sudah tersync tapi antrean belum dihapus)
-          const serverIds = new Set(list.map(c => c.memberId + '_' + new Date(c.checkInTime).getTime()));
+          // Tambahkan data dari server
           list.forEach(c => combined.push(c));
 
           if (combined.length > 0) {
