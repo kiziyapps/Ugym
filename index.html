@@ -3840,12 +3840,15 @@ Selamat berlatih!`;
       const totalExpenses = (s.expenses || 0) + pendingExpenses;
       if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(totalExpenses);
 
-      const netProfit = (totalFitnessRevenue + totalPOSRevenue) - totalExpenses;
+      const totalFitnessNetProfit = (s.fitnessNetProfit || 0) + pendingExtensionRev;
+      const totalPOSNetProfit = (s.posNetProfit || 0) + (pendingPOSRev * 0.2); // Estimasi margin 20% untuk pending
+      const netProfit = totalFitnessNetProfit + totalPOSNetProfit;
+
       if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(netProfit);
       
-      // Update Detailed Net Profits (Server data + optimistic estimates)
-      if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency((s.fitnessNetProfit || 0) + pendingExtensionRev);
-      if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency((s.posNetProfit || 0) + (pendingPOSRev * 0.2)); // 20% margin estimate for pending
+      // Update Detailed Net Profits
+      if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency(totalFitnessNetProfit);
+      if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency(totalPOSNetProfit);
 
       // Hide financial stats for Staff & Kasir
       if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
