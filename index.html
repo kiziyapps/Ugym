@@ -3684,7 +3684,7 @@ Selamat berlatih!`;
               <i class="fas fa-history" style="color:#64748b"></i> Aktivitas Check-In Terbaru
             </div>
             <div class="table-container">
-               <div id="todayCheckins">
+               <div id="recentCheckinsContainer">
                  <div style="text-align:center;padding:40px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>
                </div>
             </div>
@@ -5884,7 +5884,15 @@ Selamat berlatih!`;
       const container = document.getElementById('recentCheckinsContainer');
       if (!container) return;
 
-      let combined = list || [];
+      // Normalisasi data dari server agar sesuai dengan format UI
+      let combined = (list || []).map(item => ({
+        memberName: item.memberName || item.name || '-',
+        memberId: item.memberId || item.id || '-',
+        checkInTime: item.checkInTime || item.time || new Date(),
+        type: item.type || 'Regular',
+        status: item.status || 'Aktif',
+        isSyncing: false
+      }));
       
       // MERGE PENDING CHECKINS (OPTIMISTIC)
       const queue = SyncQueue.get();
