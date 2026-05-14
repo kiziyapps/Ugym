@@ -2875,6 +2875,9 @@
         <div class="menu-item" data-view="birthdays" onclick="showView('birthdays')">
           <i class="fas fa-birthday-cake"></i><span>Ulang Tahun Member</span>
         </div>
+        <div class="menu-item" data-view="followup" onclick="showView('followup')">
+          <i class="fas fa-paper-plane"></i><span>Follow-up Member</span>
+        </div>
         <div class="menu-item" data-view="analytics" onclick="showView('analytics')">
           <i class="fas fa-chart-pie"></i><span>Laporan Analitik</span>
         </div>
@@ -3518,6 +3521,7 @@ Selamat berlatih!`;
         catalog: 'Katalog & Inventori',
         expenses: 'Pengeluaran Toko',
         analytics: 'Laporan Analitik & Grafik',
+        followup: 'Follow-up Membership',
         birthdays: 'Ulang Tahun Member'
       };
 
@@ -3538,6 +3542,7 @@ Selamat berlatih!`;
         case 'catalog': loadCatalogView(); break;
         case 'expenses': loadExpensesView(); break;
         case 'analytics': loadAnalyticsView(); break;
+        case 'followup': loadFollowupView(); break;
         case 'birthdays': loadBirthdaysView(); break;
         case 'gallery': loadGalleryView(); break;
       }
@@ -10427,6 +10432,208 @@ Selamat berlatih!`;
           showToast('Error: ' + err.message, 'error');
         })
         .saveBirthdayTemplate(template);
+    }
+
+    // ================ FOLLOW-UP VIEW ================
+    function loadFollowupView() {
+      const container = document.getElementById('contentArea');
+      container.innerHTML = `
+        <div class="view-header">
+          <h2 class="view-title">Follow-up Membership</h2>
+          <div style="display:flex; gap:12px">
+            <button class="btn btn-primary" onclick="refreshFollowup()">
+              <i class="fas fa-sync-alt"></i> Refresh Data
+            </button>
+          </div>
+        </div>
+        
+        <div class="row">
+          <!-- List Kolom Kiri -->
+          <div class="col-12 col-md-8">
+            <div class="card" style="margin-bottom:24px">
+              <div class="card-header" style="background:#fff7ed; border-bottom:1px solid #ffedd5">
+                <h3 class="card-title" style="color:#9a3412"><i class="fas fa-hourglass-half"></i> Mendekati Expired (7 Hari Ke Depan)</h3>
+              </div>
+              <div class="card-body">
+                <div id="expiringListContainer" style="min-height:100px; max-height: 400px; overflow-y: auto;">
+                  <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header" style="background:#fef2f2; border-bottom:1px solid #fee2e2">
+                <h3 class="card-title" style="color:#991b1b"><i class="fas fa-exclamation-circle"></i> Sudah Expired (7 Hari Terakhir)</h3>
+              </div>
+              <div class="card-body">
+                <div id="expiredListContainer" style="min-height:100px; max-height: 400px; overflow-y: auto;">
+                  <div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Editor Template Kolom Kanan -->
+          <div class="col-12 col-md-4">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Pesan WhatsApp (Template)</h3>
+              </div>
+              <div class="card-body">
+                <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.4">
+                  Parameter:<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{name}</code> : Nama Member<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{expiry_date}</code> : Tanggal Expire
+                </p>
+                
+                <label class="form-label" style="font-size:11px">TEMPLATE MENDEKATI EXPIRED</label>
+                <textarea id="expiringTemplateInput" class="form-input" style="height:120px;resize:vertical;font-size:13px;margin-bottom:16px" placeholder="Pesan mendekati expired..."></textarea>
+                
+                <label class="form-label" style="font-size:11px">TEMPLATE SUDAH EXPIRED</label>
+                <textarea id="expiredTemplateInput" class="form-input" style="height:120px;resize:vertical;font-size:13px" placeholder="Pesan sudah expired..."></textarea>
+                
+                <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="saveFollowupTemplates()" id="btnSaveFollowupTemplate">
+                  <i class="fas fa-save"></i> Simpan Template
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      refreshFollowup();
+    }
+
+    let currentExpiringTemplate = "";
+    let currentExpiredTemplate = "";
+
+    function refreshFollowup() {
+      const expiringContainer = document.getElementById('expiringListContainer');
+      const expiredContainer = document.getElementById('expiredListContainer');
+      
+      if (!expiringContainer || !expiredContainer) return;
+      
+      expiringContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
+      expiredContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          if (!res || !res.success) {
+            expiringContainer.innerHTML = `<div class="alert alert-error">Gagal: ${res ? res.message : 'Error'}</div>`;
+            expiredContainer.innerHTML = '';
+            return;
+          }
+
+          // Set templates
+          currentExpiringTemplate = res.expiringTemplate;
+          currentExpiredTemplate = res.expiredTemplate;
+          
+          if (document.getElementById('expiringTemplateInput')) {
+            document.getElementById('expiringTemplateInput').value = res.expiringTemplate;
+            document.getElementById('expiredTemplateInput').value = res.expiredTemplate;
+          }
+
+          // Render Expiring
+          if (!res.expiring || res.expiring.length === 0) {
+            expiringContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Tidak ada member mendekati expired</div>';
+          } else {
+            let html = '<div class="list-container">';
+            res.expiring.forEach(m => {
+              html += `
+                <div class="list-item">
+                  <div class="list-item-content">
+                    <div class="list-item-title">${escapeHtml(m.name)}</div>
+                    <div class="list-item-subtitle" style="margin-top:4px">
+                      <span class="badge badge-warning" style="margin-right:8px">Expired: ${m.expiryDateFormatted}</span>
+                      <i class="fas fa-phone"></i> ${m.phone}
+                    </div>
+                  </div>
+                  <div class="list-item-action">
+                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expiring')">
+                      <i class="fab fa-whatsapp"></i> Follow-up
+                    </button>
+                  </div>
+                </div>
+              `;
+            });
+            html += '</div>';
+            expiringContainer.innerHTML = html;
+          }
+
+          // Render Expired
+          if (!res.expired || res.expired.length === 0) {
+            expiredContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">Tidak ada member baru saja expired</div>';
+          } else {
+            let html = '<div class="list-container">';
+            res.expired.forEach(m => {
+              html += `
+                <div class="list-item">
+                  <div class="list-item-content">
+                    <div class="list-item-title">${escapeHtml(m.name)}</div>
+                    <div class="list-item-subtitle" style="margin-top:4px">
+                      <span class="badge badge-error" style="margin-right:8px">Expired: ${m.expiryDateFormatted}</span>
+                      <i class="fas fa-phone"></i> ${m.phone}
+                    </div>
+                  </div>
+                  <div class="list-item-action">
+                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expired')">
+                      <i class="fab fa-whatsapp"></i> Re-call
+                    </button>
+                  </div>
+                </div>
+              `;
+            });
+            html += '</div>';
+            expiredContainer.innerHTML = html;
+          }
+        })
+        .withFailureHandler(function (err) {
+          expiringContainer.innerHTML = `<div class="alert alert-error">Error: ${err.message}</div>`;
+        })
+        .getExpiringMembers();
+    }
+
+    function sendFollowupWA(name, expiryDate, phone, type) {
+      const template = type === 'expiring' ? currentExpiringTemplate : currentExpiredTemplate;
+      if (!template) {
+        showToast('Template belum dimuat', 'warning');
+        return;
+      }
+
+      let message = template
+        .replace(/{name}/gi, name)
+        .replace(/{expiry_date}/gi, expiryDate);
+
+      shareToWhatsApp(phone, message);
+    }
+
+    function saveFollowupTemplates() {
+      const expiring = document.getElementById('expiringTemplateInput').value;
+      const expired = document.getElementById('expiredTemplateInput').value;
+      const btn = document.getElementById('btnSaveFollowupTemplate');
+      const originalText = btn.innerHTML;
+
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+      btn.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          if (res && res.success) {
+            currentExpiringTemplate = expiring;
+            currentExpiredTemplate = expired;
+            showToast('Template follow-up berhasil disimpan!', 'success');
+          } else {
+            showToast('Gagal: ' + (res ? res.message : ''), 'error');
+          }
+        })
+        .withFailureHandler(function (err) {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+          showToast('Error: ' + err.message, 'error');
+        })
+        .saveExpiringTemplate(expiring, expired);
     }
 
 
