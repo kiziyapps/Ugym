@@ -5184,6 +5184,7 @@ Selamat berlatih!`;
         // 2. QUEUE
         SyncQueue.add('processTransaction', [
           {
+            requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
             memberId: mid,
             packageId: pkgEl.value,
             paymentMethod: payment,
@@ -5627,6 +5628,7 @@ Selamat berlatih!`;
 
         showLoading();
         const payload = {
+          requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
           items: posCart,
           subtotal: subtotal,
           discount: discPercent,
@@ -7225,7 +7227,11 @@ Selamat berlatih!`;
           if (!forcedMid) document.getElementById('ci_memberId').value = '';
 
           // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
-          SyncQueue.add('processCheckInWithPT', [{ memberId: mid, usePT: usePT }, currentUser?.name || 'Admin']);
+          SyncQueue.add('processCheckInWithPT', [{ 
+            requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+            memberId: mid, 
+            usePT: usePT 
+          }, currentUser?.name || 'Admin']);
           loadTodayCheckins(); 
           return;
         }
@@ -7472,6 +7478,7 @@ Selamat berlatih!`;
       }
 
       SyncQueue.add('processVisitCheckIn', [{
+        requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         visitorName: name,
         visitorPhone: phone,
         visitType: type,
@@ -7971,6 +7978,7 @@ Selamat berlatih!`;
           // Add to Sync Queue
           SyncQueue.add('registerPTSession', [
             {
+              requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
               memberId: ptSelectedMember.memberId,
               trainerName: trainer,
               totalSessions: sessions,
