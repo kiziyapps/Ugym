@@ -10552,7 +10552,6 @@ Selamat berlatih!`;
 
     let currentExpiringTemplate = "";
     let currentExpiredTemplate = "";
-    let currentScriptUrl = "";
 
     function refreshFollowup() {
       const expiringContainer = document.getElementById('expiringListContainer');
@@ -10574,7 +10573,6 @@ Selamat berlatih!`;
           // Set templates
           currentExpiringTemplate = res.expiringTemplate;
           currentExpiredTemplate = res.expiredTemplate;
-          currentScriptUrl = res.scriptUrl;
           
           if (document.getElementById('expiringTemplateInput')) {
             document.getElementById('expiringTemplateInput').value = res.expiringTemplate;
@@ -10656,7 +10654,7 @@ Selamat berlatih!`;
         return;
       }
 
-      const link = `${currentScriptUrl}?page=extension&id=${id}`;
+      const link = `https://kiziyapps.github.io/Ugym/PublicExtension.html?id=${id}`;
 
       let message = template
         .replace(/{name}/gi, name)
