@@ -130,6 +130,30 @@
         });
       }
     };
+    
+    const FollowupTracker = {
+      key: 'ugym_followup_tracking',
+      get(id, type, val) {
+        const data = JSON.parse(localStorage.getItem(this.key) || '{}');
+        return data[`${type}_${id}_${val}`] === true;
+      },
+      set(id, type, val, status) {
+        const data = JSON.parse(localStorage.getItem(this.key) || '{}');
+        if (status) data[`${type}_${id}_${val}`] = true;
+        else delete data[`${type}_${id}_${val}`];
+        localStorage.setItem(this.key, JSON.stringify(data));
+      }
+    };
+
+    function toggleFollowupCheck(cb, id, type, val) {
+      const isChecked = cb.checked;
+      FollowupTracker.set(id, type, val, isChecked);
+      const item = cb.closest('.list-item');
+      if (item) {
+        if (isChecked) item.classList.add('contacted');
+        else item.classList.remove('contacted');
+      }
+    }
 
     const SyncManager = {
       isSyncing: false,
@@ -1220,6 +1244,24 @@
       font-size: 15px;
       font-weight: 700;
       color: var(--primary);
+    }
+
+    .list-item.contacted {
+      background: var(--primary-light) !important;
+      border-left: 4px solid #10b981 !important;
+    }
+    
+    .list-item.contacted .list-item-title {
+      text-decoration: line-through;
+      color: #94a3b8;
+    }
+    
+    .followup-checkbox {
+      width: 18px;
+      height: 18px;
+      margin-right: 15px;
+      cursor: pointer;
+      accent-color: #10b981;
     }
 
     .table-responsive {
@@ -10365,9 +10407,12 @@ Selamat berlatih!`;
           res.birthdays.forEach(b => {
             const isToday = new Date(b.nextBirthday).toDateString() === todayStr;
             const bdayDate = new Date(b.nextBirthday).toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+            const bdayKey = b.nextBirthday.split('T')[0];
+            const isDone = FollowupTracker.get(b.id, 'birthday', bdayKey);
 
             html += `
-              <div class="list-item" style="${isToday ? 'border-left: 4px solid #d4af37; background: #fffcf0;' : ''}">
+              <div class="list-item ${isDone ? 'contacted' : ''}" style="${isToday && !isDone ? 'border-left: 4px solid #d4af37; background: #fffcf0;' : ''}">
+                <input type="checkbox" class="followup-checkbox" ${isDone ? 'checked' : ''} onchange="toggleFollowupCheck(this, '${b.id}', 'birthday', '${bdayKey}')">
                 <div class="list-item-content">
                   <div class="list-item-title">${escapeHtml(b.name)}</div>
                   <div class="list-item-subtitle" style="margin-top:4px">
@@ -10378,7 +10423,7 @@ Selamat berlatih!`;
                   </div>
                 </div>
                 <div class="list-item-action">
-                  <button class="btn ${isToday ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="sendBdayWA('${b.name}', ${b.age}, '${b.phone}')">
+                  <button class="btn ${isToday ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="sendBdayWA('${b.name.replace(/'/g, "\\'")}', ${b.age}, '${b.phone}')">
                     <i class="fab fa-whatsapp"></i> ${isToday ? 'Kirim Ucapan' : 'Pesan'}
                   </button>
                 </div>
@@ -10483,7 +10528,8 @@ Selamat berlatih!`;
                 <p style="font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.4">
                   Parameter:<br>
                   <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{name}</code> : Nama Member<br>
-                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{expiry_date}</code> : Tanggal Expire
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{expiry_date}</code> : Tanggal Expire<br>
+                  <code style="background:#f1f5f9;padding:2px 4px;border-radius:4px">{link}</code> : Link Perpanjangan Online
                 </p>
                 
                 <label class="form-label" style="font-size:11px">TEMPLATE MENDEKATI EXPIRED</label>
@@ -10506,6 +10552,7 @@ Selamat berlatih!`;
 
     let currentExpiringTemplate = "";
     let currentExpiredTemplate = "";
+    let currentScriptUrl = "";
 
     function refreshFollowup() {
       const expiringContainer = document.getElementById('expiringListContainer');
@@ -10527,6 +10574,7 @@ Selamat berlatih!`;
           // Set templates
           currentExpiringTemplate = res.expiringTemplate;
           currentExpiredTemplate = res.expiredTemplate;
+          currentScriptUrl = res.scriptUrl;
           
           if (document.getElementById('expiringTemplateInput')) {
             document.getElementById('expiringTemplateInput').value = res.expiringTemplate;
@@ -10539,8 +10587,12 @@ Selamat berlatih!`;
           } else {
             let html = '<div class="list-container">';
             res.expiring.forEach(m => {
+              const expKey = m.expiryDate.split('T')[0];
+              const isDone = FollowupTracker.get(m.id, 'expiring', expKey);
+
               html += `
-                <div class="list-item">
+                <div class="list-item ${isDone ? 'contacted' : ''}">
+                  <input type="checkbox" class="followup-checkbox" ${isDone ? 'checked' : ''} onchange="toggleFollowupCheck(this, '${m.id}', 'expiring', '${expKey}')">
                   <div class="list-item-content">
                     <div class="list-item-title">${escapeHtml(m.name)}</div>
                     <div class="list-item-subtitle" style="margin-top:4px">
@@ -10549,7 +10601,7 @@ Selamat berlatih!`;
                     </div>
                   </div>
                   <div class="list-item-action">
-                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expiring')">
+                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.id}', '${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expiring')">
                       <i class="fab fa-whatsapp"></i> Follow-up
                     </button>
                   </div>
@@ -10566,8 +10618,12 @@ Selamat berlatih!`;
           } else {
             let html = '<div class="list-container">';
             res.expired.forEach(m => {
+              const expKey = m.expiryDate.split('T')[0];
+              const isDone = FollowupTracker.get(m.id, 'expired', expKey);
+
               html += `
-                <div class="list-item">
+                <div class="list-item ${isDone ? 'contacted' : ''}">
+                  <input type="checkbox" class="followup-checkbox" ${isDone ? 'checked' : ''} onchange="toggleFollowupCheck(this, '${m.id}', 'expired', '${expKey}')">
                   <div class="list-item-content">
                     <div class="list-item-title">${escapeHtml(m.name)}</div>
                     <div class="list-item-subtitle" style="margin-top:4px">
@@ -10576,7 +10632,7 @@ Selamat berlatih!`;
                     </div>
                   </div>
                   <div class="list-item-action">
-                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expired')">
+                    <button class="btn btn-outline btn-sm" onclick="sendFollowupWA('${m.id}', '${m.name.replace(/'/g, "\\'")}', '${m.expiryDateFormatted}', '${m.phone}', 'expired')">
                       <i class="fab fa-whatsapp"></i> Re-call
                     </button>
                   </div>
@@ -10593,16 +10649,19 @@ Selamat berlatih!`;
         .getExpiringMembers();
     }
 
-    function sendFollowupWA(name, expiryDate, phone, type) {
+    function sendFollowupWA(id, name, expiryDate, phone, type) {
       const template = type === 'expiring' ? currentExpiringTemplate : currentExpiredTemplate;
       if (!template) {
         showToast('Template belum dimuat', 'warning');
         return;
       }
 
+      const link = `${currentScriptUrl}?page=extension&id=${id}`;
+
       let message = template
         .replace(/{name}/gi, name)
-        .replace(/{expiry_date}/gi, expiryDate);
+        .replace(/{expiry_date}/gi, expiryDate)
+        .replace(/{link}/gi, link);
 
       shareToWhatsApp(phone, message);
     }
