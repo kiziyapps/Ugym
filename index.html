@@ -7500,7 +7500,9 @@ Selamat berlatih!`;
     function processVisitCheckinSubmit() {
       const name = document.getElementById('visit_name').value || 'Visitor';
       const phone = document.getElementById('visit_phone').value || '-';
-      const type = document.getElementById('visit_type').value;
+      const typeSelect = document.getElementById('visit_type');
+      const typeId = typeSelect.value;
+      const typeName = typeSelect.options[typeSelect.selectedIndex]?.text.split(' - ')[0] || typeId;
       const payment = document.getElementById('visit_payment').value || 'Cash';
 
       closeVisitModal();
@@ -7518,7 +7520,7 @@ Selamat berlatih!`;
             </div>
             <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
               <p><b>${escapeHtml(name)}</b> (${escapeHtml(phone)})</p>
-              <p style="margin-top:4px;font-size:13px;color:#64748b">Visit ${type} - ${payment}</p>
+              <p style="margin-top:4px;font-size:13px;color:#64748b">Visit ${escapeHtml(typeName)} - ${payment}</p>
             </div>
           </div>
         `;
@@ -7528,7 +7530,7 @@ Selamat berlatih!`;
         requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         visitorName: name,
         visitorPhone: phone,
-        visitType: type,
+        visitType: typeId,
         paymentMethod: payment
       }]);
 
