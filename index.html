@@ -337,7 +337,7 @@
         }
 
         modal.innerHTML = `
-          <div class="modal-content" style="max-width:350px;border-radius:16px;overflow:hidden;padding:0">
+          <div id="receiptPrintableArea" class="modal-content" style="max-width:350px;border-radius:16px;overflow:hidden;padding:0;background:white">
             <div style="background:#667eea;color:white;padding:20px;text-align:center">
               <i class="fas fa-receipt fa-3x" style="margin-bottom:12px"></i>
               <h3 style="margin:0">Transaksi Berhasil</h3>
@@ -356,11 +356,25 @@
                 </div>
                 <div style="margin-top:4px;font-size:11px;color:#64748b;text-align:right">Metode: ${data.paymentMethod}</div>
               </div>
-              <div style="display:flex;gap:10px">
-                <button class="btn btn-primary" style="flex:1" onclick="window.print();document.body.removeChild(document.getElementById('receiptPreviewModal'))">
+              
+              ${(data.expiry && data.expiry !== '-') ? `
+              <div style="margin-bottom:16px;text-align:center;font-size:12px;padding:8px;background:#f1f5f9;border-radius:8px">
+                Berlaku s/d: <b>${formatDate(data.expiry)}</b>
+              </div>
+              ` : ''}
+
+              ${(data.qr) ? `
+              <div style="margin-bottom:20px;text-align:center">
+                <div style="font-size:11px;color:#64748b;margin-bottom:8px">QR Code ID Member:</div>
+                <img src="${data.qr}" style="width:120px;height:120px;margin:0 auto;display:block">
+              </div>
+              ` : ''}
+
+              <div class="no-print" style="display:flex;gap:10px">
+                <button class="btn btn-primary" style="flex:1" onclick="ReceiptGenerator.printReceiptContent()">
                   <i class="fas fa-print"></i> Cetak
                 </button>
-                <button class="btn btn-secondary" style="flex:1" onclick="document.body.removeChild(document.getElementById('receiptPreviewModal'))">
+                <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('receiptPreviewModal').remove()">
                   Tutup
                 </button>
               </div>
@@ -369,6 +383,30 @@
           </div>
         `;
         document.body.appendChild(modal);
+      },
+      printReceiptContent: function() {
+        const contentArea = document.getElementById('receiptPrintableArea');
+        if (!contentArea) return;
+        const content = contentArea.innerHTML;
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Cetak Resi</title>
+              <style>
+                body { font-family: monospace; display: flex; justify-content: center; background: #fff; margin: 0; padding: 20px; }
+                .modal-content { max-width: 350px !important; width: 100%; border: 1px dashed #ccc; padding: 15px; border-radius: 8px; }
+                .no-print { display: none !important; }
+              </style>
+            </head>
+            <body onload="window.print();window.close();">
+              <div class="modal-content" style="max-width:350px;overflow:hidden;padding:0;background:white">
+                ${content}
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
       }
     };
 
@@ -5297,7 +5335,9 @@ Terima kasih dan selamat berlatih!`;
                         memberName: t.memberName,
                         packageName: t.packageName,
                         totalAmount: t.totalAmount,
-                        paymentMethod: t.paymentMethod
+                        paymentMethod: t.paymentMethod,
+                        qr: t.qrUrl || '',
+                        expiry: t.expiry || '-'
                       };
                       const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
                       
@@ -5309,7 +5349,8 @@ Terima kasih dan selamat berlatih!`;
                         total: t.totalAmount,
                         payment: t.paymentMethod,
                         receipt: t.receiptNumber,
-                        qr: t.qrUrl || ''
+                        qr: t.qrUrl || '',
+                        expiry: t.expiry || '-'
                       };
                       
                       // Using hardcoded link format for JS evaluation safety
