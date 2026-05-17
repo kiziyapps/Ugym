@@ -309,9 +309,12 @@
     // ================ IMPROVEMENT 3: LOCAL RECEIPT GENERATOR ================
     const ReceiptGenerator = {
       showPreview: function (data, type = 'membership') {
+        const existingModal = document.getElementById('receiptPreviewModal');
+        if (existingModal) existingModal.remove();
+
         const modal = document.createElement('div');
         modal.id = 'receiptPreviewModal';
-        modal.className = 'modal';
+        modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '10000';
         
@@ -5244,7 +5247,7 @@ Terima kasih dan selamat berlatih!`;
                         <td><span class="badge badge-outline" style="font-size:10px">${escapeHtml(t.payment)}</span></td>
                         <td><small>${t.cashier}</small></td>
                         <td>
-                          <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier}))}')), 'pos')" title="Cetak Resi">
+                          <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier})).replace(/'/g, "%27")}')), 'pos')" title="Cetak Resi">
                             <i class="fas fa-print"></i>
                           </button>
                         </td>
@@ -5296,12 +5299,13 @@ Terima kasih dan selamat berlatih!`;
                         totalAmount: t.totalAmount,
                         paymentMethod: t.paymentMethod
                       };
-                      const rDataStr = encodeURIComponent(JSON.stringify(rData));
+                      const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
                       
                       const waData = {
                         memberId: t.memberId,
                         name: t.memberName,
                         package: t.packageName,
+                        price: t.totalAmount,
                         total: t.totalAmount,
                         payment: t.paymentMethod,
                         receipt: t.receiptNumber,
@@ -5336,11 +5340,10 @@ Terima kasih dan selamat berlatih!`;
                         <td><b>${formatCurrency(t.totalAmount)}</b><br><span class="badge badge-outline" style="font-size:10px">${escapeHtml(t.paymentMethod)}</span></td>
                         <td>
                           <div style="display:flex;gap:4px">
-                            ${t.phone ? `<a href="${waUrl}" class="btn btn-sm" style="background:#25D366;color:white;padding:4px 8px" title="Kirim WA"><i class="fab fa-whatsapp"></i></a>` : ''}
+                            ${(t.phone && typeFilter !== 'Visit') ? `<a href="${waUrl}" class="btn btn-sm" style="background:#25D366;color:white;padding:4px 8px" title="Kirim WA"><i class="fab fa-whatsapp"></i></a>` : ''}
                             <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${rDataStr}')), 'membership')" title="Cetak Resi">
                               <i class="fas fa-print"></i>
                             </button>
-                            ${(typeFilter === 'Registration' && t.qrUrl) ? `<a href="${t.qrUrl}" target="_blank" class="btn btn-sm btn-outline" style="padding:4px 8px" title="Lihat QR Code"><i class="fas fa-qrcode"></i></a>` : ''}
                           </div>
                         </td>
                       </tr>
