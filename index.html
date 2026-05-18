@@ -8216,6 +8216,9 @@ Terima kasih dan selamat berlatih!`;
       const el = document.getElementById('approvalsContainer');
       if (!el) return;
 
+      const tzOffset = new Date().getTimezoneOffset() * 60000;
+      const localDateStr = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
+
       if (!list || !list.length) {
         el.innerHTML = `
           <div style="text-align:center;padding:60px;color:#94a3b8">
@@ -8264,11 +8267,11 @@ Terima kasih dan selamat berlatih!`;
                   <div style="margin:12px 0; display:grid; grid-template-columns:1fr 1fr; gap:8px">
                     <div class="form-group" style="margin:0">
                       <label style="font-size:11px; font-weight:600; color:#64748b">TANGGAL PEMBAYARAN</label>
-                      <input type="date" id="payDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${new Date().toISOString().split('T')[0]}">
+                      <input type="date" id="payDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${localDateStr}">
                     </div>
                     <div class="form-group" style="margin:0">
                       <label style="font-size:11px; font-weight:600; color:#64748b">TANGGAL MULAI AKTIF</label>
-                      <input type="date" id="startDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${new Date().toISOString().split('T')[0]}">
+                      <input type="date" id="startDate_${a.approvalId}" class="form-input" style="padding:6px; font-size:12px" value="${localDateStr}">
                     </div>
                   </div>
                   
