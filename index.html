@@ -323,7 +323,7 @@
           itemsHtml = data.items.map(it => `
             <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
               <span>${it.name} x${it.qty}</span>
-              <span>${formatCurrency(it.total)}</span>
+              <span>${formatCurrency(it.total || (it.price * it.qty) || 0)}</span>
             </div>
           `).join('');
         } else {
