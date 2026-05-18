@@ -3634,6 +3634,14 @@ Terima kasih dan selamat berlatih!`;
             <div class="stat-value" id="statNetProfit">Rp 0</div>
             <div class="stat-label">Gym Net + POS Net</div>
           </div>
+          <div class="stat-card stat-card-clickable" style="border-top-color:#ef4444" onclick="showDashboardDetail('deleted_transactions')">
+            <div class="stat-header">
+              <span class="stat-label">Riwayat Hapus</span>
+              <div class="stat-icon" style="background:#fee2e2; color:#b91c1c"><i class="fas fa-trash-alt"></i></div>
+            </div>
+            <div class="stat-value" id="statDeletedTransactions">Klik</div>
+            <div class="stat-label">Lihat Transaksi Dihapus</div>
+          </div>
         </div>
 
         <div class="dashboard-grid-2-1">
@@ -3837,6 +3845,7 @@ Terima kasih dan selamat berlatih!`;
       if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
       if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = (s.checkins || 0) + pendingCheckins;
       if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
+      if (document.getElementById('statDeletedTransactions')) document.getElementById('statDeletedTransactions').textContent = s.deletedCount || 0;
       
       const totalFitnessRevenue = (s.revenue || 0) + totalPendingFitnessRev;
       if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(totalFitnessRevenue);
@@ -5285,9 +5294,14 @@ Terima kasih dan selamat berlatih!`;
                         <td><span class="badge badge-outline" style="font-size:10px">${escapeHtml(t.payment)}</span></td>
                         <td><small>${t.cashier}</small></td>
                         <td>
-                          <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier})).replace(/'/g, "%27")}')), 'pos')" title="Cetak Resi">
-                            <i class="fas fa-print"></i>
-                          </button>
+                          <div style="display:flex;gap:4px">
+                            <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier})).replace(/'/g, "%27")}')), 'pos')" title="Cetak Resi">
+                              <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.id}')" title="Hapus Transaksi">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     `).join('')}
@@ -5384,6 +5398,9 @@ Terima kasih dan selamat berlatih!`;
                             ${(t.phone && typeFilter !== 'Visit') ? `<a href="${waUrl}" class="btn btn-sm" style="background:#25D366;color:white;padding:4px 8px" title="Kirim WA"><i class="fab fa-whatsapp"></i></a>` : ''}
                             <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${rDataStr}')), 'membership')" title="Cetak Resi">
                               <i class="fas fa-print"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.receiptNumber}')" title="Hapus Transaksi">
+                              <i class="fas fa-trash"></i>
                             </button>
                           </div>
                         </td>
@@ -8716,6 +8733,7 @@ Terima kasih dan selamat berlatih!`;
                       <th>Total</th>
                       <th>Tanggal</th>
                       <th>Status</th>
+                      <th>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -8727,6 +8745,11 @@ Terima kasih dan selamat berlatih!`;
                         <td><b style="color:#22c55e">${formatCurrency(t.totalAmount || 0)}</b></td>
                         <td>${formatDateTime(t.transactionDate)}</td>
                         <td><span class="badge badge-success">Berhasil</span></td>
+                        <td>
+                          <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.receiptNumber}')" title="Hapus Transaksi">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -9342,7 +9365,8 @@ Terima kasih dan selamat berlatih!`;
         'pos_revenue': 'Rincian Pendapatan Retail/POS',
         'expenses': 'Rincian Semua Pengeluaran',
         'fitness_expenses': 'Rincian Pengeluaran Fitness',
-        'pos_expenses': 'Rincian Pengeluaran Retail/POS'
+        'pos_expenses': 'Rincian Pengeluaran Retail/POS',
+        'deleted_transactions': 'Riwayat Hapus Transaksi'
       };
 
       title.textContent = titles[type] || 'Detail Data';
@@ -9352,38 +9376,80 @@ Terima kasih dan selamat berlatih!`;
       const startDate = document.getElementById('dash_start_date')?.value || '';
       const endDate = document.getElementById('dash_end_date')?.value || '';
 
-      google.script.run
-        .withSuccessHandler(function (res) {
-          if (res && res.success) {
-            if (res.data.length === 0) {
-              container.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8">Tidak ada data untuk periode ini.</div>';
-              return;
-            }
-
-            let html = `
-              <div class="table-responsive">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      ${res.headers.map(h => `<th>${h}</th>`).join('')}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${res.data.map(row => `
+      if (type === 'deleted_transactions') {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res && res.success) {
+              if (!res.data || res.data.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8">Tidak ada data riwayat penghapusan.</div>';
+                return;
+              }
+              let html = `
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
                       <tr>
-                        ${row.map(cell => `<td>${cell}</td>`).join('')}
+                        <th>ID Transaksi</th>
+                        <th>Sumber</th>
+                        <th>Tanggal Hapus</th>
+                        <th>Dihapus Oleh</th>
+                        <th>Alasan</th>
                       </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            `;
-            container.innerHTML = html;
-          } else {
-            container.innerHTML = '<div style="color:red;padding:20px">' + (res.message || 'Gagal memuat data') + '</div>';
-          }
-        })
-        .getDashboardDetail(type, startDate, endDate);
+                    </thead>
+                    <tbody>
+                      ${res.data.map(t => `
+                        <tr>
+                          <td><code>${escapeHtml(t.id)}</code></td>
+                          <td>${escapeHtml(t.source)}</td>
+                          <td>${escapeHtml(t.dateDeleted)}</td>
+                          <td>${escapeHtml(t.user)}</td>
+                          <td>${escapeHtml(t.reason)}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `;
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<div style="color:red;padding:20px">' + (res.message || 'Gagal memuat riwayat') + '</div>';
+            }
+          })
+          .getDeletedTransactions();
+      } else {
+        google.script.run
+          .withSuccessHandler(function (res) {
+            if (res && res.success) {
+              if (res.data.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8">Tidak ada data untuk periode ini.</div>';
+                return;
+              }
+
+              let html = `
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        ${res.headers.map(h => `<th>${h}</th>`).join('')}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${res.data.map(row => `
+                        <tr>
+                          ${row.map(cell => `<td>${cell}</td>`).join('')}
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `;
+              container.innerHTML = html;
+            } else {
+              container.innerHTML = '<div style="color:red;padding:20px">' + (res.message || 'Gagal memuat data') + '</div>';
+            }
+          })
+          .getDashboardDetail(type, startDate, endDate);
+      }
     }
 
     function closeDetailModal() {
@@ -10301,6 +10367,9 @@ Terima kasih dan selamat berlatih!`;
                       <div style="text-align:right">
                         ${formatCurrency(t.Total)}
                         <div style="font-size:11px; color:#8E8E93; font-weight:normal">${t['Metode Pembayaran']}</div>
+                        <button class="btn btn-sm btn-outline" style="padding:2px 6px; color:#ef4444; border-color:#ef4444; margin-top:4px" onclick="event.stopPropagation(); deleteTransactionUI('${t['ID Transaksi']}')" title="Hapus Transaksi">
+                          <i class="fas fa-trash"></i> Hapus
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -10320,6 +10389,50 @@ Terima kasih dan selamat berlatih!`;
       // This is already inside showInventoryTools in index.html
       // We'll update the render part there.
     }
+    // ================ TRANSACTION DELETION UI ================
+    function deleteTransactionUI(transactionId) {
+      const reason = prompt('Masukkan alasan penghapusan transaksi (Wajib):');
+      if (!reason || reason.trim() === '') {
+        showToast('Alasan penghapusan wajib diisi!', 'warning');
+        return;
+      }
+      
+      showConfirm('PERHATIAN: Anda yakin ingin menghapus transaksi ini? Data terkait seperti stok atau check-in akan ikut disesuaikan. Data yang dihapus akan masuk ke riwayat penghapusan.', function (ok) {
+        if (!ok) return;
+        
+        showLoading('Menghapus transaksi...');
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res.success) {
+              showToast(res.message, 'success');
+              // Refresh tables
+              const contentArea = document.getElementById('contentArea').innerHTML;
+              if (contentArea.includes('id="posTodayTransactions"')) {
+                loadTodayPOSTransactions();
+              }
+              if (contentArea.includes('id="adminDataView"')) {
+                loadTransactionList();
+              }
+              if (document.getElementById('posHistoryTableContainer') && document.getElementById('posHistoryTableContainer').innerHTML !== '') {
+                loadPOSTransactionHistory();
+              }
+              // Refresh dashboard widgets if on dashboard
+              if (contentArea.includes('id="dashboardContent"')) {
+                loadDashboardData();
+              }
+            } else {
+              showToast(res.message, 'error');
+            }
+          })
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Error: ' + err.message, 'error');
+          })
+          .deleteTransaction(transactionId, reason.trim(), currentUser?.name || 'Admin');
+      });
+    }
+
     // ================ BIRTHDAYS VIEW ================
     function loadBirthdaysView() {
       const container = document.getElementById('contentArea');
