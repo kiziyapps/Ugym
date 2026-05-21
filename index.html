@@ -5355,15 +5355,27 @@ Terima kasih dan selamat berlatih!`;
                     </tr>
                   </thead>
                   <tbody>
-                    ${list.map(t => {
+                     ${list.map(t => {
                       let trainer = '-';
                       let sessions = '-';
+                      
+                      // Fallback 1: Ambil jumlah sesi dari nama paket (e.g. "Personal Trainer 10 Sesi")
+                      if (t.packageName) {
+                        const pkgMatch = t.packageName.match(/(\d+)\s*Sesi/i);
+                        if (pkgMatch) sessions = pkgMatch[1];
+                      }
+
+                      // Fallback 2: Ambil dari notes (jika ada data yang tersimpan)
                       if (t.notes) {
                         const trainerMatch = t.notes.match(/Trainer:\s*([^.]+)/);
                         const sessionsMatch = t.notes.match(/Sesi:\s*(\d+)/);
-                        if (trainerMatch) trainer = trainerMatch[1].trim();
-                        if (sessionsMatch) sessions = sessionsMatch[1].trim();
+                        if (trainerMatch && trainerMatch[1]) trainer = trainerMatch[1].trim();
+                        if (sessionsMatch && sessionsMatch[1]) sessions = sessionsMatch[1].trim();
                       }
+
+                      // Bersihkan jika ada string literal "undefined" dari data lama
+                      if (trainer === 'undefined' || !trainer) trainer = '-';
+                      if (sessions === 'undefined' || !sessions) sessions = '-';
 
                       const rData = {
                         receiptNumber: t.receiptNumber,
