@@ -332,6 +332,18 @@
               <span>Paket: ${data.packageName || data.currentPackage}</span>
               <span>${formatCurrency(data.price || data.totalAmount)}</span>
             </div>
+            ${data.trainer && data.trainer !== '-' ? `
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+              <span>Trainer</span>
+              <b>${escapeHtml(data.trainer)}</b>
+            </div>
+            ` : ''}
+            ${data.sessions && data.sessions !== '-' ? `
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+              <span>Jumlah Sesi</span>
+              <b>${data.sessions} Sesi</b>
+            </div>
+            ` : ''}
             ${data.registrationFee ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px"><span>Biaya Reg</span><span>${formatCurrency(data.registrationFee)}</span></div>` : ''}
           `;
         }
@@ -5344,6 +5356,15 @@ Terima kasih dan selamat berlatih!`;
                   </thead>
                   <tbody>
                     ${list.map(t => {
+                      let trainer = '-';
+                      let sessions = '-';
+                      if (t.notes) {
+                        const trainerMatch = t.notes.match(/Trainer:\s*([^.]+)/);
+                        const sessionsMatch = t.notes.match(/Sesi:\s*(\d+)/);
+                        if (trainerMatch) trainer = trainerMatch[1].trim();
+                        if (sessionsMatch) sessions = sessionsMatch[1].trim();
+                      }
+
                       const rData = {
                         receiptNumber: t.receiptNumber,
                         memberName: t.memberName,
@@ -5351,7 +5372,9 @@ Terima kasih dan selamat berlatih!`;
                         totalAmount: t.totalAmount,
                         paymentMethod: t.paymentMethod,
                         qr: t.qrUrl || '',
-                        expiry: t.expiry || '-'
+                        expiry: t.expiry || '-',
+                        trainer: trainer,
+                        sessions: sessions
                       };
                       const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
                       
@@ -5364,7 +5387,9 @@ Terima kasih dan selamat berlatih!`;
                         payment: t.paymentMethod,
                         receipt: t.receiptNumber,
                         qr: t.qrUrl || '',
-                        expiry: t.expiry || '-'
+                        expiry: t.expiry || '-',
+                        trainer: trainer,
+                        sessions: sessions
                       };
                       
                       // Using hardcoded link format for JS evaluation safety
@@ -7645,7 +7670,10 @@ Terima kasih dan selamat berlatih!`;
                   </select>
                 </div>
                 
-                <input type="hidden" id="pt_trainer">
+                <div class="form-group">
+                  <label class="form-label"><i class="fas fa-user-ninja"></i> Nama Trainer *</label>
+                  <input type="text" id="pt_trainer" class="form-input" placeholder="Ketik nama trainer...">
+                </div>
                 
                 <div class="form-row">
                   <div class="form-group">
@@ -7765,11 +7793,9 @@ Terima kasih dan selamat berlatih!`;
 
       const sessions = parseInt(opt.getAttribute('data-sessions')) || 10;
       const price = parseInt(opt.getAttribute('data-price')) || 150000;
-      const name = opt.getAttribute('data-name');
 
       document.getElementById('pt_sessions').value = sessions;
       document.getElementById('pt_price').value = price;
-      document.getElementById('pt_trainer').value = name;
 
       updatePTSummary();
     }
