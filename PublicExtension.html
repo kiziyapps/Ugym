@@ -446,26 +446,42 @@
 
     window.onload = function() {
       loadPackages();
-      
-      // Check if memberId is provided in URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const memberId = urlParams.get('id') || urlParams.get('memberId');
-      if (memberId) {
-        document.getElementById('memberIdInput').value = memberId;
-        loadMemberInfo();
-      }
+      restoreDraft();
+      setupAutosave();
     };
 
     function loadPackages() {
+      const cacheKey = 'ugym_pub_packages';
+      const cacheExpiryKey = 'ugym_pub_packages_expiry';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheExpiry = localStorage.getItem(cacheExpiryKey);
+      
+      const isCacheValid = cachedData && cacheExpiry && (Date.now() < parseInt(cacheExpiry));
+      
+      if (isCacheValid) {
+        try {
+          const res = JSON.parse(cachedData);
+          packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
+          if (currentMember) renderPackages();
+          console.log('⚡ Loaded packages from Client-Side Cache in Extension');
+        } catch(e) {
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(cacheExpiryKey);
+        }
+      }
+      
       google.script.run
         .withSuccessHandler(function(res) {
           if (res && res.success) {
+            localStorage.setItem(cacheKey, JSON.stringify(res));
+            localStorage.setItem(cacheExpiryKey, (Date.now() + 2 * 60 * 60 * 1000).toString());
+            
             packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
             if (currentMember) renderPackages();
           }
         })
         .withFailureHandler(function(err) {
-          console.error('Gagal memuat paket:', err);
+          console.error('Gagal memperbarui paket dari server:', err);
         })
         .getPackages();
     }
@@ -633,6 +649,9 @@ function submitExtensionRequest() {
           btn.disabled = false;
 
           if (res && res.success) {
+            // Bersihkan draft perpanjangan karena sukses
+            clearDraft();
+
             showAlert(
               `✅ PERMINTAAN PERPANJANGAN TERKIRIM!\n\n` +
               `No. Request: ${res.requestId}\n` +
@@ -673,6 +692,43 @@ function submitExtensionRequest() {
     });
   };
   reader.readAsDataURL(selectedFile);
+}
+
+// ================ AUTOSAVE DRAFT FORM ================
+function saveDraft() {
+  const memberId = document.getElementById('memberIdInput')?.value || '';
+  localStorage.setItem('ugym_pub_ext_draft', memberId);
+}
+
+function restoreDraft() {
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    const memberIdUrl = urlParams.get('id') || urlParams.get('memberId');
+    if (memberIdUrl) {
+      document.getElementById('memberIdInput').value = memberIdUrl;
+      loadMemberInfo();
+      return;
+    }
+
+    const savedMemberId = localStorage.getItem('ugym_pub_ext_draft');
+    if (savedMemberId) {
+      document.getElementById('memberIdInput').value = savedMemberId;
+    }
+  } catch(e) {
+    console.warn('Gagal memulihkan draft perpanjangan:', e);
+  }
+}
+
+function clearDraft() {
+  localStorage.removeItem('ugym_pub_ext_draft');
+}
+
+function setupAutosave() {
+  const el = document.getElementById('memberIdInput');
+  if (el) {
+    el.addEventListener('input', saveDraft);
+    el.addEventListener('change', saveDraft);
+  }
 }
 
     function showAlert(message, type = 'info') {
