@@ -1239,41 +1239,81 @@
     }
 
     // ================ LOAD PACKAGES ================
+    // ================ RENDER PACKAGES ================
+    function renderPackagesList(res) {
+      const container = document.getElementById('packagesContainer');
+      if (!container) return;
+      
+      if (!res || !res.success || !res.packages || !res.packages.length) {
+        container.innerHTML = '<p style="color:#ef4444;text-align:center;padding:30px">Tidak ada paket tersedia saat ini.</p>';
+        return;
+      }
+      
+      packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
+      
+      container.innerHTML = `
+        <div class="packages-grid">
+          ${packages.map(p => `
+            <div class="package-card" id="pkg_${p.id}" onclick="selectPackage(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+              <div class="package-name">${p.name}</div>
+              <div class="package-price">${formatCurrency(p.price)}</div>
+              <div class="package-duration">
+                <i class="far fa-clock"></i> ${p.duration || '-'}
+              </div>
+              ${p.benefits ? `
+                <div style="margin-top:12px;font-size:12px;color:#64748b">
+                  <i class="fas fa-check-circle" style="color:#22c55e"></i> ${p.benefits}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      // Re-apply selected package UI style if it exists
+      if (selectedPackage) {
+        const el = document.getElementById('pkg_' + selectedPackage.id);
+        if (el) el.classList.add('selected');
+      }
+    }
+
+    // ================ LOAD PACKAGES (Stale-While-Revalidate) ================
     function loadPackages() {
+      const cacheKey = 'ugym_pub_packages';
+      const cacheExpiryKey = 'ugym_pub_packages_expiry';
+      const cachedData = localStorage.getItem(cacheKey);
+      const cacheExpiry = localStorage.getItem(cacheExpiryKey);
+      
+      const isCacheValid = cachedData && cacheExpiry && (Date.now() < parseInt(cacheExpiry));
+      
+      if (isCacheValid) {
+        try {
+          const res = JSON.parse(cachedData);
+          renderPackagesList(res);
+          console.log('⚡ Loaded packages from Client-Side Cache');
+        } catch(e) {
+          localStorage.removeItem(cacheKey);
+          localStorage.removeItem(cacheExpiryKey);
+        }
+      }
+      
       google.script.run
         .withSuccessHandler(function(res) {
-          const container = document.getElementById('packagesContainer');
-          if (!container) return;
-          
-          if (!res || !res.success || !res.packages || !res.packages.length) {
-            container.innerHTML = '<p style="color:#ef4444;text-align:center;padding:30px">Tidak ada paket tersedia saat ini.</p>';
-            return;
+          if (res && res.success && res.packages && res.packages.length) {
+            // Simpan ke cache lokal (kedaluwarsa dalam 2 jam)
+            localStorage.setItem(cacheKey, JSON.stringify(res));
+            localStorage.setItem(cacheExpiryKey, (Date.now() + 2 * 60 * 60 * 1000).toString());
+            
+            // Render ulang dengan data segar dari server
+            renderPackagesList(res);
           }
-          
-          packages = res.packages.filter(p => p.type && p.type.toLowerCase().includes('regular'));
-          
-          container.innerHTML = `
-            <div class="packages-grid">
-              ${packages.map(p => `
-                <div class="package-card" id="pkg_${p.id}" onclick="selectPackage(${JSON.stringify(p).replace(/"/g,'&quot;')})">
-                  <div class="package-name">${p.name}</div>
-                  <div class="package-price">${formatCurrency(p.price)}</div>
-                  <div class="package-duration">
-                    <i class="far fa-clock"></i> ${p.duration || '-'}
-                  </div>
-                  ${p.benefits ? `
-                    <div style="margin-top:12px;font-size:12px;color:#64748b">
-                      <i class="fas fa-check-circle" style="color:#22c55e"></i> ${p.benefits}
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('')}
-            </div>
-          `;
         })
         .withFailureHandler(function(err) {
-          document.getElementById('packagesContainer').innerHTML = 
-            '<p style="color:#ef4444;text-align:center;padding:30px">Gagal memuat paket: ' + err.message + '</p>';
+          console.error('Gagal memperbarui paket dari server:', err);
+          if (!isCacheValid) {
+            document.getElementById('packagesContainer').innerHTML = 
+              '<p style="color:#ef4444;text-align:center;padding:30px">Gagal memuat paket: ' + err.message + '</p>';
+          }
         })
         .getPackages();
     }
@@ -1294,6 +1334,9 @@
       
       // Enable next button
       document.getElementById('btnNextToPayment').disabled = false;
+
+      // Simpan draft formulir
+      saveDraft();
     }
 
     // ================ FILE UPLOAD ================
@@ -1399,6 +1442,9 @@
               'success'
             );
             
+            // Bersihkan draft formulir karena registrasi sukses
+            clearDraft();
+            
             // Hide payment form
             document.getElementById('paymentSection').style.display = 'none';
             
@@ -1415,9 +1461,59 @@
         .submitRegistration(registrationData);
     }
 
+    // ================ AUTOSAVE DRAFT FORM ================
+    function saveDraft() {
+      const draft = {
+        fullName: document.getElementById('fullName')?.value || '',
+        dob: document.getElementById('dob')?.value || '',
+        phone: document.getElementById('phone')?.value || '',
+        email: document.getElementById('email')?.value || '',
+        paymentMethod: document.getElementById('paymentMethod')?.value || '',
+        selectedPackage: selectedPackage ? { id: selectedPackage.id, name: selectedPackage.name, price: selectedPackage.price, duration: selectedPackage.duration } : null
+      };
+      localStorage.setItem('ugym_pub_reg_draft', JSON.stringify(draft));
+    }
+
+    function restoreDraft() {
+      try {
+        const draftStr = localStorage.getItem('ugym_pub_reg_draft');
+        if (!draftStr) return;
+        const draft = JSON.parse(draftStr);
+        
+        if (draft.fullName) document.getElementById('fullName').value = draft.fullName;
+        if (draft.dob) document.getElementById('dob').value = draft.dob;
+        if (draft.phone) document.getElementById('phone').value = draft.phone;
+        if (draft.email) document.getElementById('email').value = draft.email;
+        if (draft.paymentMethod) document.getElementById('paymentMethod').value = draft.paymentMethod;
+        
+        if (draft.selectedPackage) {
+          selectPackage(draft.selectedPackage);
+        }
+      } catch(e) {
+        console.warn('Gagal memulihkan draft:', e);
+      }
+    }
+
+    function clearDraft() {
+      localStorage.removeItem('ugym_pub_reg_draft');
+    }
+
+    function setupAutosave() {
+      const fields = ['fullName', 'dob', 'phone', 'email', 'paymentMethod'];
+      fields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('input', saveDraft);
+          el.addEventListener('change', saveDraft);
+        }
+      });
+    }
+
     // Initialize
     window.onload = function() {
       loadPackages();
+      restoreDraft();
+      setupAutosave();
     };
     function getDirectLink(url) {
       if (!url) return '';
