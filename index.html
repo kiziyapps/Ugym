@@ -3307,6 +3307,18 @@ Terima kasih dan selamat berlatih!`;
 
     function showConfirm(msg, cb) {
       confirmCallback = cb;
+      const titleEl = document.querySelector('#confirmModal h3');
+      if (titleEl) titleEl.textContent = 'Konfirmasi';
+      document.getElementById('confirmMessage').textContent = msg;
+      document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function showConfirmModal(title, msg, cb) {
+      confirmCallback = function (ok) {
+        if (ok && typeof cb === 'function') cb();
+      };
+      const titleEl = document.querySelector('#confirmModal h3');
+      if (titleEl) titleEl.textContent = title || 'Konfirmasi';
       document.getElementById('confirmMessage').textContent = msg;
       document.getElementById('confirmModal').style.display = 'flex';
     }
@@ -8902,53 +8914,51 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function showDuplicateCleanupDialog() {
-      showConfirm(
+      const choice = prompt(
         '🧹 CLEANUP DUPLIKAT DATA\n\n' +
         'Pilih jenis cleanup:\n\n' +
         '1. Hapus duplikat MEMBER (berdasarkan email & nomor HP)\n' +
         '2. Hapus duplikat TRANSAKSI (berdasarkan URL bukti bayar)\n' +
         '3. Hapus SEMUA duplikat\n\n' +
-        'Masukkan nomor pilihan (1-3):',
-        function (choice) {
-          if (!choice) return;
-
-          let fn;
-          switch (choice) {
-            case '1':
-              fn = 'checkAndRemoveDuplicateMembers';
-              break;
-            case '2':
-              fn = 'checkAndRemoveDuplicateTransactions';
-              break;
-            case '3':
-              fn = 'autoRemoveDuplicates';
-              break;
-            default:
-              showToast('Pilihan tidak valid', 'warning');
-              return;
-          }
-
-          showLoading();
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              if (res && res.success) {
-                showToast(`✅ ${res.message}`, 'success');
-                showAlert('adminAlert',
-                  `✅ Cleanup selesai!\n\nDihapus: ${res.removed || 0} duplikat\n\nDetail: ${JSON.stringify(res.duplicates || []).substring(0, 200)}`,
-                  'success'
-                );
-              } else {
-                showToast('❌ ' + (res?.message || 'Gagal'), 'error');
-              }
-            })
-            .withFailureHandler(function (err) {
-              hideLoading();
-              showToast('Error: ' + err.message, 'error');
-            })
-          [fn]();
-        }
+        'Masukkan nomor pilihan (1-3):'
       );
+      if (!choice) return;
+
+      let fn;
+      switch (choice.trim()) {
+        case '1':
+          fn = 'checkAndRemoveDuplicateMembers';
+          break;
+        case '2':
+          fn = 'checkAndRemoveDuplicateTransactions';
+          break;
+        case '3':
+          fn = 'autoRemoveDuplicates';
+          break;
+        default:
+          showToast('Pilihan tidak valid', 'warning');
+          return;
+      }
+
+      showLoading();
+      google.script.run
+        .withSuccessHandler(function (res) {
+          hideLoading();
+          if (res && res.success) {
+            showToast(`✅ ${res.message}`, 'success');
+            showAlert('adminAlert',
+              `✅ Cleanup selesai!\n\nDihapus: ${res.removed || 0} duplikat\n\nDetail: ${JSON.stringify(res.duplicates || []).substring(0, 200)}`,
+              'success'
+            );
+          } else {
+            showToast('❌ ' + (res?.message || 'Gagal'), 'error');
+          }
+        })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Error: ' + err.message, 'error');
+        })
+        [fn]();
     }
 
     function loadUserList() {
