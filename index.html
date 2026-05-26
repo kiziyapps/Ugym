@@ -3605,75 +3605,172 @@ Terima kasih dan selamat berlatih!`;
           <button onclick="resetDashboardFilter()" style="margin-left:auto; background:none; border:none; color:#6b46c1; cursor:pointer; text-decoration:underline; font-size:12px">Reset Filter</button>
         </div>
 
-        <!-- 1. RINGKASAN UTAMA (KPI) -->
-        <div class="dashboard-section-title">
-          <i class="fas fa-star" style="color:#f59e0b"></i> Indikator Utama (KPI)
-        </div>
-        <div class="kpi-container">
-          <div class="stat-card stat-card-clickable" id="cardTotalMember" onclick="showDashboardDetail('total_member')">
-            <div class="stat-header">
-              <span class="stat-label">Total Member</span>
-              <div class="stat-icon" style="background:#f1f5f9; color:#64748b"><i class="fas fa-users"></i></div>
+        <!-- CATEGORIZED KPI DASHBOARD -->
+        <div style="display:flex; flex-direction:column; gap:28px">
+          
+          <!-- CATEGORY 1: KEANGGOTAAN & OPERASIONAL -->
+          <div>
+            <div class="dashboard-section-title" style="border-left: 4px solid var(--primary); padding-left: 12px; margin-bottom:16px; font-size:16px; font-weight:700; color:var(--text-main)">
+              <i class="fas fa-id-card" style="color:var(--primary); margin-right:8px"></i> Keanggotaan & Operasional Member
             </div>
-            <div class="stat-value" id="statTotal">0</div>
-            <div class="stat-label">Database Terdaftar</div>
-          </div>
-          <div class="stat-card stat-card-clickable" id="cardMemberAktif" style="border-top-color:#22c55e" onclick="showDashboardDetail('active_member')">
-            <div class="stat-header">
-              <span class="stat-label">Member Aktif</span>
-              <div class="stat-icon" style="background:#dcfce7; color:#166534"><i class="fas fa-user-check"></i></div>
+            <div class="kpi-container" style="margin-bottom:0">
+              <div class="stat-card stat-card-clickable" id="cardTotalMember" onclick="showDashboardDetail('total_member')">
+                <div class="stat-header">
+                  <span class="stat-label">Total Member</span>
+                  <div class="stat-icon" style="background:#f1f5f9; color:#64748b"><i class="fas fa-users"></i></div>
+                </div>
+                <div class="stat-value" id="statTotal">0</div>
+                <div class="stat-label">Database Terdaftar</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardMemberAktif" style="border-top-color:#22c55e" onclick="showDashboardDetail('active_member')">
+                <div class="stat-header">
+                  <span class="stat-label">Member Aktif</span>
+                  <div class="stat-icon" style="background:#dcfce7; color:#166534"><i class="fas fa-user-check"></i></div>
+                </div>
+                <div class="stat-value" id="statAktif">0</div>
+                <div class="stat-label">Sesuai Masa Aktif</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardNewRegistrations" style="border-top-color:#3b82f6" onclick="showDashboardDetail('new_registrations')">
+                <div class="stat-header">
+                  <span class="stat-label">Registrasi Baru</span>
+                  <div class="stat-icon" style="background:#dbeafe; color:#1e40af"><i class="fas fa-user-plus"></i></div>
+                </div>
+                <div class="stat-value" id="statNewRegistrations">0</div>
+                <div class="stat-label" id="labelNewRegistrationsRevenue">Omset: Rp 0</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardExpiring" style="border-top-color:#fbbf24" onclick="showDashboardDetail('expiring_member')">
+                <div class="stat-header">
+                  <span class="stat-label">Segera Expire</span>
+                  <div class="stat-icon" style="background:#fffbeb; color:#d97706"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+                <div class="stat-value" id="statExpiring">0</div>
+                <div class="stat-label">Kurang dari 7 hari</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardExpired" style="border-top-color:#ef4444" onclick="showDashboardDetail('expired_member')">
+                <div class="stat-header">
+                  <span class="stat-label">Member Expired</span>
+                  <div class="stat-icon" style="background:#fee2e2; color:#b91c1c"><i class="fas fa-user-times"></i></div>
+                </div>
+                <div class="stat-value" id="statExpired">0</div>
+                <div class="stat-label">Masa Aktif Habis</div>
+              </div>
             </div>
-            <div class="stat-value" id="statAktif">0</div>
-            <div class="stat-label">Sesuai Masa Aktif</div>
           </div>
-          <div class="stat-card stat-card-clickable" id="cardGallery" style="border-top-color:#f472b6" onclick="showView('gallery')">
-            <div class="stat-header">
-              <span class="stat-label">Galeri Member</span>
-              <div class="stat-icon" style="background:#fdf2f8; color:#db2777"><i class="fas fa-images"></i></div>
+
+          <!-- CATEGORY 2: KUNJUNGAN & AKTIVITAS -->
+          <div>
+            <div class="dashboard-section-title" style="border-left: 4px solid #10b981; padding-left: 12px; margin-bottom:16px; font-size:16px; font-weight:700; color:var(--text-main)">
+              <i class="fas fa-walking" style="color:#10b981; margin-right:8px"></i> Kunjungan & Aktivitas Harian
             </div>
-            <div class="stat-value" id="statGallery">0</div>
-            <div class="stat-label">Member Berfoto</div>
-          </div>
-          <div class="stat-card stat-card-clickable" id="cardBirthday" style="border-top-color:#fbbf24" onclick="showView('birthdays')">
-            <div class="stat-header">
-              <span class="stat-label">Ulang Tahun</span>
-              <div class="stat-icon" style="background:#fffbeb; color:#d97706"><i class="fas fa-birthday-cake"></i></div>
+            <div class="kpi-container" style="margin-bottom:0">
+              <div class="stat-card stat-card-clickable" style="border-top-color:#059669" onclick="showDashboardDetail('regular_checkins')">
+                <div class="stat-header">
+                  <span class="stat-label">Check-In Regular</span>
+                  <div class="stat-icon" style="background:#d1fae5; color:#065f46"><i class="fas fa-door-open"></i></div>
+                </div>
+                <div class="stat-value" id="statRegularCheckins">0</div>
+                <div class="stat-label">Kunjungan Member</div>
+              </div>
+              <div class="stat-card stat-card-clickable" style="border-top-color:#8b5cf6" onclick="showDashboardDetail('pt_checkins')">
+                <div class="stat-header">
+                  <span class="stat-label">Check-In PT</span>
+                  <div class="stat-icon" style="background:#f3e8ff; color:#6b46c1"><i class="fas fa-dumbbell"></i></div>
+                </div>
+                <div class="stat-value" id="statPTCheckins">0</div>
+                <div class="stat-label">Latihan dengan Trainer</div>
+              </div>
+              <div class="stat-card stat-card-clickable" style="border-top-color:#f59e0b" onclick="showDashboardDetail('visit_checkins')">
+                <div class="stat-header">
+                  <span class="stat-label">Visit Harian</span>
+                  <div class="stat-icon" style="background:#fef3c7; color:#92400e"><i class="fas fa-ticket-alt"></i></div>
+                </div>
+                <div class="stat-value" id="statVisitCheckins">0</div>
+                <div class="stat-label">Check-In Non-Member</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardGallery" style="border-top-color:#f472b6" onclick="showView('gallery')">
+                <div class="stat-header">
+                  <span class="stat-label">Galeri Member</span>
+                  <div class="stat-icon" style="background:#fdf2f8; color:#db2777"><i class="fas fa-images"></i></div>
+                </div>
+                <div class="stat-value" id="statGallery">0</div>
+                <div class="stat-label">Member Berfoto</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardBirthday" style="border-top-color:#fbbf24" onclick="showView('birthdays')">
+                <div class="stat-header">
+                  <span class="stat-label">Ulang Tahun</span>
+                  <div class="stat-icon" style="background:#fffbeb; color:#d97706"><i class="fas fa-birthday-cake"></i></div>
+                </div>
+                <div class="stat-value" id="statBirthday">0</div>
+                <div class="stat-label">Hari Ini</div>
+              </div>
             </div>
-            <div class="stat-value" id="statBirthday">0</div>
-            <div class="stat-label">Hari Ini</div>
           </div>
-          <div class="stat-card stat-card-clickable" style="border-top-color:#3b82f6" onclick="showDashboardDetail('checkins')">
-            <div class="stat-header">
-              <span class="stat-label">Check-In Hari Ini</span>
-              <div class="stat-icon" style="background:#dbeafe; color:#1e40af"><i class="fas fa-door-open"></i></div>
+
+          <!-- CATEGORY 3: FINANSIAL & PENJUALAN -->
+          <div>
+            <div class="dashboard-section-title" style="border-left: 4px solid #f59e0b; padding-left: 12px; margin-bottom:16px; font-size:16px; font-weight:700; color:var(--text-main)">
+              <i class="fas fa-wallet" style="color:#f59e0b; margin-right:8px"></i> Finansial & Omset Penjualan
             </div>
-            <div class="stat-value" id="statCheckin">0</div>
-            <div class="stat-label">Kunjungan Terhitung</div>
-          </div>
-          <div class="stat-card stat-card-clickable" id="cardRenewals" style="border-top-color:#06b6d4" onclick="showDashboardDetail('renewals')">
-            <div class="stat-header">
-              <span class="stat-label">Perpanjangan Member</span>
-              <div class="stat-icon" style="background:#ecfeff; color:#0891b2"><i class="fas fa-sync-alt"></i></div>
+            <div class="kpi-container" style="margin-bottom:0">
+              <div class="stat-card" style="border-top-color:#10b981">
+                <div class="stat-header">
+                  <span class="stat-label">Total Laba Bersih</span>
+                  <div class="stat-icon" style="background:#d1fae5; color:#065f46"><i class="fas fa-chart-line"></i></div>
+                </div>
+                <div class="stat-value" id="statNetProfit" style="font-size:22px">Rp 0</div>
+                <div class="stat-label">Gym Net + POS Net</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardRenewals" style="border-top-color:#06b6d4" onclick="showDashboardDetail('renewals')">
+                <div class="stat-header">
+                  <span class="stat-label">Omset Perpanjangan</span>
+                  <div class="stat-icon" style="background:#ecfeff; color:#0891b2"><i class="fas fa-sync-alt"></i></div>
+                </div>
+                <div class="stat-value" id="statRenewals">0</div>
+                <div class="stat-label" id="labelRenewalsRevenue">Omset: Rp 0</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardPTRevenue" style="border-top-color:#6366f1" onclick="showDashboardDetail('pt_sales')">
+                <div class="stat-header">
+                  <span class="stat-label">Omset Personal Trainer</span>
+                  <div class="stat-icon" style="background:#e0e7ff; color:#3730a3"><i class="fas fa-user-shield"></i></div>
+                </div>
+                <div class="stat-value" id="statPTSales">0</div>
+                <div class="stat-label" id="labelPTRevenue">Omset: Rp 0</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardVisitRevenue" style="border-top-color:#f97316" onclick="showDashboardDetail('visit_sales')">
+                <div class="stat-header">
+                  <span class="stat-label">Omset Visit Harian</span>
+                  <div class="stat-icon" style="background:#fff7ed; color:#9a3412"><i class="fas fa-ticket-alt"></i></div>
+                </div>
+                <div class="stat-value" id="statVisitSales">0</div>
+                <div class="stat-label" id="labelVisitRevenue">Omset: Rp 0</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardPOSTransactions" style="border-top-color:#ec4899" onclick="showDashboardDetail('pos_transactions')">
+                <div class="stat-header">
+                  <span class="stat-label">Transaksi Retail/POS</span>
+                  <div class="stat-icon" style="background:#fdf2f8; color:#9d174d"><i class="fas fa-shopping-cart"></i></div>
+                </div>
+                <div class="stat-value" id="statPOSCount">0</div>
+                <div class="stat-label" id="labelPOSRevenueDetail">Omset: Rp 0</div>
+              </div>
+              <div class="stat-card stat-card-clickable" style="border-top-color:#8b5cf6" onclick="showDashboardDetail('pending_approvals')">
+                <div class="stat-header">
+                  <span class="stat-label">Approval Pending</span>
+                  <div class="stat-icon" style="background:#f3e8ff; color:#6b46c1"><i class="fas fa-clock"></i></div>
+                </div>
+                <div class="stat-value" id="statPending">0</div>
+                <div class="stat-label">Menunggu Verifikasi</div>
+              </div>
+              <div class="stat-card stat-card-clickable" style="border-top-color:#ef4444" onclick="showDashboardDetail('deleted_transactions')">
+                <div class="stat-header">
+                  <span class="stat-label">Riwayat Hapus</span>
+                  <div class="stat-icon" style="background:#fee2e2; color:#b91c1c"><i class="fas fa-trash-alt"></i></div>
+                </div>
+                <div class="stat-value" id="statDeletedTransactions">0</div>
+                <div class="stat-label">Transaksi Dihapus</div>
+              </div>
             </div>
-            <div class="stat-value" id="statRenewals">0</div>
-            <div class="stat-label" id="labelRenewalsRevenue">Omset: Rp 0</div>
           </div>
-          <div class="stat-card" style="border-top-color:#8b5cf6">
-            <div class="stat-header">
-              <span class="stat-label">Total Laba Bersih</span>
-              <div class="stat-icon" style="background:#f3e8ff; color:#6b46c1"><i class="fas fa-wallet"></i></div>
-            </div>
-            <div class="stat-value" id="statNetProfit">Rp 0</div>
-            <div class="stat-label">Gym Net + POS Net</div>
-          </div>
-          <div class="stat-card stat-card-clickable" style="border-top-color:#ef4444" onclick="showDashboardDetail('deleted_transactions')">
-            <div class="stat-header">
-              <span class="stat-label">Riwayat Hapus</span>
-              <div class="stat-icon" style="background:#fee2e2; color:#b91c1c"><i class="fas fa-trash-alt"></i></div>
-            </div>
-            <div class="stat-value" id="statDeletedTransactions">Klik</div>
-            <div class="stat-label">Lihat Transaksi Dihapus</div>
-          </div>
+
         </div>
 
         <div class="dashboard-grid-2-1">
@@ -3859,41 +3956,66 @@ Terima kasih dan selamat berlatih!`;
       const queue = SyncQueue.get();
       let pendingMemberCount = queue.filter(q => q.action === 'registerMember').length;
       let pendingExtensionCount = queue.filter(q => q.action === 'processTransaction').length;
+      let pendingPTSalesCount = queue.filter(q => q.action === 'registerPTSession').length;
+      let pendingVisitSalesCount = queue.filter(q => q.action === 'processVisitCheckIn').length;
+      let pendingPOSCount = queue.filter(q => q.action === 'processPOSTransaction').length;
       
-      // Hitung Omzet Fitness Pending (Perpanjangan + PT)
+      // Hitung Omzet Pending
       let pendingExtensionRev = queue.filter(q => q.action === 'processTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
-      let pendingPTRev = queue.filter(q => q.action === 'registerPTSession').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
-      let totalPendingFitnessRev = pendingExtensionRev + pendingPTRev;
+      let pendingPTSalesRev = queue.filter(q => q.action === 'registerPTSession').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
+      let pendingVisitSalesRev = pendingVisitSalesCount * 35000; // Estimasi 35k per visit
+      let pendingNewRegistrationsRev = queue.filter(q => q.action === 'registerMember').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
+      let totalPendingFitnessRev = pendingExtensionRev + pendingPTSalesRev + pendingVisitSalesRev + pendingNewRegistrationsRev;
 
       let pendingPOSRev = queue.filter(q => q.action === 'processPOSTransaction').reduce((sum, q) => sum + (q.args[0]?.total || 0), 0);
       let pendingExpenses = queue.filter(q => q.action === 'saveExpense').reduce((sum, q) => sum + (q.args[0]?.amount || 0), 0);
-      let pendingCheckins = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT').length;
+      
+      let pendingRegularCheckins = queue.filter(q => q.action === 'processCheckIn').length;
+      let pendingPTCheckins = queue.filter(q => q.action === 'processCheckInWithPT').length;
+      let pendingVisitCheckins = queue.filter(q => q.action === 'processVisitCheckIn').length;
+      let pendingCheckins = pendingRegularCheckins + pendingPTCheckins + pendingVisitCheckins;
 
-      // Fitness Stats
+      // 1. KEANGGOTAAN & OPERASIONAL MEMBER
       if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = (s.total || 0) + pendingMemberCount;
       if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
-      if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
-      if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
+      if (document.getElementById('statNewRegistrations')) document.getElementById('statNewRegistrations').textContent = (s.newRegistrationsCount || 0) + pendingMemberCount;
+      if (document.getElementById('labelNewRegistrationsRevenue')) document.getElementById('labelNewRegistrationsRevenue').textContent = 'Omset: ' + formatCurrency((s.newRegistrationsRevenue || 0) + pendingNewRegistrationsRev);
       if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
       if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
-      if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = (s.checkins || 0) + pendingCheckins;
-      if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
-      if (document.getElementById('statDeletedTransactions')) document.getElementById('statDeletedTransactions').textContent = s.deletedCount || 0;
+      
+      // 2. KUNJUNGAN & AKTIVITAS HARIAN
+      if (document.getElementById('statRegularCheckins')) document.getElementById('statRegularCheckins').textContent = (s.regularCheckinsCount || 0) + pendingRegularCheckins;
+      if (document.getElementById('statPTCheckins')) document.getElementById('statPTCheckins').textContent = (s.ptCheckinsCount || 0) + pendingPTCheckins;
+      if (document.getElementById('statVisitCheckins')) document.getElementById('statVisitCheckins').textContent = (s.visitCheckinsCount || 0) + pendingVisitCheckins;
+      if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
+      if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
+      
+      // 3. FINANSIAL & PENJUALAN
       if (document.getElementById('statRenewals')) document.getElementById('statRenewals').textContent = (s.renewalsCount || 0) + pendingExtensionCount;
       if (document.getElementById('labelRenewalsRevenue')) document.getElementById('labelRenewalsRevenue').textContent = 'Omset: ' + formatCurrency((s.renewalsRevenue || 0) + pendingExtensionRev);
+      
+      if (document.getElementById('statPTSales')) document.getElementById('statPTSales').textContent = (s.ptSalesCount || 0) + pendingPTSalesCount;
+      if (document.getElementById('labelPTRevenue')) document.getElementById('labelPTRevenue').textContent = 'Omset: ' + formatCurrency((s.ptSalesRevenue || 0) + pendingPTSalesRev);
+      
+      if (document.getElementById('statVisitSales')) document.getElementById('statVisitSales').textContent = (s.visitSalesCount || 0) + pendingVisitSalesCount;
+      if (document.getElementById('labelVisitRevenue')) document.getElementById('labelVisitRevenue').textContent = 'Omset: ' + formatCurrency((s.visitSalesRevenue || 0) + pendingVisitSalesRev);
+      
+      if (document.getElementById('statPOSCount')) document.getElementById('statPOSCount').textContent = (s.posTransactionsCount || 0) + pendingPOSCount;
+      if (document.getElementById('labelPOSRevenueDetail')) document.getElementById('labelPOSRevenueDetail').textContent = 'Omset: ' + formatCurrency((s.posRevenue || 0) + pendingPOSRev);
+      
+      if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
+      if (document.getElementById('statDeletedTransactions')) document.getElementById('statDeletedTransactions').textContent = s.deletedCount || 0;
       
       const totalFitnessRevenue = (s.revenue || 0) + totalPendingFitnessRev;
       if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(totalFitnessRevenue);
 
-      // POS Stats
       const totalPOSRevenue = (s.posRevenue || 0) + pendingPOSRev;
       if (document.getElementById('statPOSRevenue')) document.getElementById('statPOSRevenue').textContent = formatCurrency(totalPOSRevenue);
-      if (document.getElementById('statPOSToday')) document.getElementById('statPOSToday').textContent = (s.posCount || 0) + pendingPOSRev; // assuming 1 pos per pending pos (not perfect but better)
       
       const totalExpenses = (s.expenses || 0) + pendingExpenses;
       if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(totalExpenses);
 
-      const totalFitnessNetProfit = (s.fitnessNetProfit || 0) + pendingExtensionRev;
+      const totalFitnessNetProfit = (s.fitnessNetProfit || 0) + pendingExtensionRev + pendingPTSalesRev + pendingVisitSalesRev + pendingNewRegistrationsRev;
       const totalPOSNetProfit = (s.posNetProfit || 0) + (pendingPOSRev * 0.2); // Estimasi margin 20% untuk pending
       const netProfit = totalFitnessNetProfit + totalPOSNetProfit;
 
@@ -3905,7 +4027,10 @@ Terima kasih dan selamat berlatih!`;
 
       // Hide financial stats for Staff & Kasir
       if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
-        const financialStats = ['statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit', 'labelRenewalsRevenue'];
+        const financialStats = [
+          'statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit', 
+          'labelRenewalsRevenue', 'labelPTRevenue', 'labelVisitRevenue', 'labelPOSRevenueDetail', 'labelNewRegistrationsRevenue'
+        ];
         financialStats.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.textContent = '***';
@@ -9404,7 +9529,10 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function showDashboardDetail(type) {
-      const financialTypes = ['fitness_revenue', 'pos_revenue', 'expenses', 'fitness_expenses', 'pos_expenses'];
+      const financialTypes = [
+        'fitness_revenue', 'pos_revenue', 'expenses', 'fitness_expenses', 'pos_expenses',
+        'renewals', 'new_registrations', 'pt_sales', 'visit_sales', 'pos_transactions'
+      ];
       if (currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir') && financialTypes.includes(type)) {
         showToast('Akses ditolak: Staf/Kasir tidak diizinkan melihat rincian keuangan.', 'warning');
         return;
@@ -9426,7 +9554,14 @@ Terima kasih dan selamat berlatih!`;
         'fitness_expenses': 'Rincian Pengeluaran Fitness',
         'pos_expenses': 'Rincian Pengeluaran Retail/POS',
         'deleted_transactions': 'Riwayat Hapus Transaksi',
-        'renewals': 'Rincian Perpanjangan Member'
+        'renewals': 'Rincian Perpanjangan Member',
+        'new_registrations': 'Rincian Registrasi Member Baru',
+        'pt_sales': 'Rincian Penjualan Paket PT',
+        'visit_sales': 'Rincian Penjualan Visit Harian',
+        'regular_checkins': 'Rincian Check-In Regular Member',
+        'pt_checkins': 'Rincian Check-In Latihan PT',
+        'visit_checkins': 'Rincian Check-In Visit Harian',
+        'pos_transactions': 'Rincian Transaksi POS/Retail Shop'
       };
 
       title.textContent = titles[type] || 'Detail Data';
