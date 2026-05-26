@@ -3636,7 +3636,7 @@ Terima kasih dan selamat berlatih!`;
                   <div class="stat-icon" style="background:#dbeafe; color:#1e40af"><i class="fas fa-user-plus"></i></div>
                 </div>
                 <div class="stat-value" id="statNewRegistrations">0</div>
-                <div class="stat-label" id="labelNewRegistrationsRevenue">Omset: Rp 0</div>
+                <div class="stat-label" id="labelNewRegistrationsCount">Member Baru</div>
               </div>
               <div class="stat-card stat-card-clickable" id="cardExpiring" style="border-top-color:#fbbf24" onclick="showDashboardDetail('expiring_member')">
                 <div class="stat-header">
@@ -3719,6 +3719,14 @@ Terima kasih dan selamat berlatih!`;
                 </div>
                 <div class="stat-value" id="statNetProfit" style="font-size:22px">Rp 0</div>
                 <div class="stat-label">Gym Net + POS Net</div>
+              </div>
+              <div class="stat-card stat-card-clickable" id="cardRegRevenue" style="border-top-color:#3b82f6" onclick="showDashboardDetail('new_registrations')">
+                <div class="stat-header">
+                  <span class="stat-label">Omset Registrasi Baru</span>
+                  <div class="stat-icon" style="background:#dbeafe; color:#1e40af"><i class="fas fa-user-plus"></i></div>
+                </div>
+                <div class="stat-value" id="statRegRevenueCount">0</div>
+                <div class="stat-label" id="labelNewRegistrationsRevenue">Omset: Rp 0</div>
               </div>
               <div class="stat-card stat-card-clickable" id="cardRenewals" style="border-top-color:#06b6d4" onclick="showDashboardDetail('renewals')">
                 <div class="stat-header">
@@ -3837,27 +3845,7 @@ Terima kasih dan selamat berlatih!`;
               <i class="fas fa-bell" style="color:#ef4444"></i> Alert & Operasional
             </div>
             
-            <!-- Alerts Stack -->
-            <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:24px">
-              <div class="stat-card stat-card-clickable" style="padding:16px; border-top:none; border-left:4px solid #f59e0b" onclick="showDashboardDetail('expiring_member')">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                  <span style="font-size:13px; font-weight:600">Member Akan Expire</span>
-                  <span class="badge badge-warning" id="statExpiring">0</span>
-                </div>
-              </div>
-              <div class="stat-card stat-card-clickable" style="padding:16px; border-top:none; border-left:4px solid #ef4444" onclick="showDashboardDetail('expired_member')">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                  <span style="font-size:13px; font-weight:600">Member Expired</span>
-                  <span class="badge badge-danger" id="statExpired">0</span>
-                </div>
-              </div>
-              <div class="stat-card stat-card-clickable" style="padding:16px; border-top:none; border-left:4px solid #8b5cf6" onclick="showDashboardDetail('pending_approvals')">
-                <div style="display:flex; justify-content:space-between; align-items:center">
-                  <span style="font-size:13px; font-weight:600">Approval Pending</span>
-                  <span class="badge badge-primary" id="statPending">0</span>
-                </div>
-              </div>
-            </div>
+            <!-- Alerts Stack (Duplicate removed) -->
 
             <div class="form-card" style="margin:0">
               <div class="form-card-header" style="padding:12px 16px; background:#fff1f2; border-bottom:1px solid #fecdd3">
@@ -3979,7 +3967,7 @@ Terima kasih dan selamat berlatih!`;
       if (document.getElementById('statTotal')) document.getElementById('statTotal').textContent = (s.total || 0) + pendingMemberCount;
       if (document.getElementById('statAktif')) document.getElementById('statAktif').textContent = s.active || 0;
       if (document.getElementById('statNewRegistrations')) document.getElementById('statNewRegistrations').textContent = (s.newRegistrationsCount || 0) + pendingMemberCount;
-      if (document.getElementById('labelNewRegistrationsRevenue')) document.getElementById('labelNewRegistrationsRevenue').textContent = 'Omset: ' + formatCurrency((s.newRegistrationsRevenue || 0) + pendingNewRegistrationsRev);
+      if (document.getElementById('labelNewRegistrationsCount')) document.getElementById('labelNewRegistrationsCount').textContent = 'Member Baru';
       if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
       if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
       
@@ -3993,6 +3981,8 @@ Terima kasih dan selamat berlatih!`;
       // 3. FINANSIAL & PENJUALAN
       if (document.getElementById('statRenewals')) document.getElementById('statRenewals').textContent = (s.renewalsCount || 0) + pendingExtensionCount;
       if (document.getElementById('labelRenewalsRevenue')) document.getElementById('labelRenewalsRevenue').textContent = 'Omset: ' + formatCurrency((s.renewalsRevenue || 0) + pendingExtensionRev);
+      if (document.getElementById('statRegRevenueCount')) document.getElementById('statRegRevenueCount').textContent = (s.newRegistrationsCount || 0) + pendingMemberCount;
+      if (document.getElementById('labelNewRegistrationsRevenue')) document.getElementById('labelNewRegistrationsRevenue').textContent = 'Omset: ' + formatCurrency((s.newRegistrationsRevenue || 0) + pendingNewRegistrationsRev);
       
       if (document.getElementById('statPTSales')) document.getElementById('statPTSales').textContent = (s.ptSalesCount || 0) + pendingPTSalesCount;
       if (document.getElementById('labelPTRevenue')) document.getElementById('labelPTRevenue').textContent = 'Omset: ' + formatCurrency((s.ptSalesRevenue || 0) + pendingPTSalesRev);
