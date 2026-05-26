@@ -3650,6 +3650,14 @@ Terima kasih dan selamat berlatih!`;
             <div class="stat-value" id="statCheckin">0</div>
             <div class="stat-label">Kunjungan Terhitung</div>
           </div>
+          <div class="stat-card stat-card-clickable" id="cardRenewals" style="border-top-color:#06b6d4" onclick="showDashboardDetail('renewals')">
+            <div class="stat-header">
+              <span class="stat-label">Perpanjangan Member</span>
+              <div class="stat-icon" style="background:#ecfeff; color:#0891b2"><i class="fas fa-sync-alt"></i></div>
+            </div>
+            <div class="stat-value" id="statRenewals">0</div>
+            <div class="stat-label" id="labelRenewalsRevenue">Omset: Rp 0</div>
+          </div>
           <div class="stat-card" style="border-top-color:#8b5cf6">
             <div class="stat-header">
               <span class="stat-label">Total Laba Bersih</span>
@@ -3850,6 +3858,7 @@ Terima kasih dan selamat berlatih!`;
       // INTEGRASI OPTIMISTIC DATA (SYNC QUEUE) KE DASHBOARD
       const queue = SyncQueue.get();
       let pendingMemberCount = queue.filter(q => q.action === 'registerMember').length;
+      let pendingExtensionCount = queue.filter(q => q.action === 'processTransaction').length;
       
       // Hitung Omzet Fitness Pending (Perpanjangan + PT)
       let pendingExtensionRev = queue.filter(q => q.action === 'processTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
@@ -3870,6 +3879,8 @@ Terima kasih dan selamat berlatih!`;
       if (document.getElementById('statCheckin')) document.getElementById('statCheckin').textContent = (s.checkins || 0) + pendingCheckins;
       if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
       if (document.getElementById('statDeletedTransactions')) document.getElementById('statDeletedTransactions').textContent = s.deletedCount || 0;
+      if (document.getElementById('statRenewals')) document.getElementById('statRenewals').textContent = (s.renewalsCount || 0) + pendingExtensionCount;
+      if (document.getElementById('labelRenewalsRevenue')) document.getElementById('labelRenewalsRevenue').textContent = 'Omset: ' + formatCurrency((s.renewalsRevenue || 0) + pendingExtensionRev);
       
       const totalFitnessRevenue = (s.revenue || 0) + totalPendingFitnessRev;
       if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(totalFitnessRevenue);
@@ -3894,7 +3905,7 @@ Terima kasih dan selamat berlatih!`;
 
       // Hide financial stats for Staff & Kasir
       if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
-        const financialStats = ['statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit'];
+        const financialStats = ['statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit', 'labelRenewalsRevenue'];
         financialStats.forEach(id => {
           const el = document.getElementById(id);
           if (el) el.textContent = '***';
@@ -9414,7 +9425,8 @@ Terima kasih dan selamat berlatih!`;
         'expenses': 'Rincian Semua Pengeluaran',
         'fitness_expenses': 'Rincian Pengeluaran Fitness',
         'pos_expenses': 'Rincian Pengeluaran Retail/POS',
-        'deleted_transactions': 'Riwayat Hapus Transaksi'
+        'deleted_transactions': 'Riwayat Hapus Transaksi',
+        'renewals': 'Rincian Perpanjangan Member'
       };
 
       title.textContent = titles[type] || 'Detail Data';
