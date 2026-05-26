@@ -3914,7 +3914,7 @@ Terima kasih dan selamat berlatih!`;
     function fetchDashboardData(start, end) {
       if (!start && !end) {
         const cached = LocalCache.get('dashboard_stats');
-        if (cached) {
+        if (cached && cached.hasOwnProperty('regularCheckinsCount')) {
           console.log('📊 Loaded Dashboard Stats from Cache');
           updateDashboardUI(cached);
           // Still fetch in background
