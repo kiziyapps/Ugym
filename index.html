@@ -9521,7 +9521,7 @@ Terima kasih dan selamat berlatih!`;
     function showDashboardDetail(type) {
       const financialTypes = [
         'fitness_revenue', 'pos_revenue', 'expenses', 'fitness_expenses', 'pos_expenses',
-        'renewals', 'new_registrations', 'pt_sales', 'visit_sales', 'pos_transactions'
+        'renewals', 'new_registrations', 'pt_sales', 'visit_sales'
       ];
       if (currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir') && financialTypes.includes(type)) {
         showToast('Akses ditolak: Staf/Kasir tidak diizinkan melihat rincian keuangan.', 'warning');
@@ -9605,30 +9605,78 @@ Terima kasih dan selamat berlatih!`;
         google.script.run
           .withSuccessHandler(function (res) {
             if (res && res.success) {
-              if (res.data.length === 0) {
+              if (!res.data || res.data.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8">Tidak ada data untuk periode ini.</div>';
                 return;
               }
 
-              let html = `
-                <div class="table-responsive">
-                  <table class="table">
-                    <thead>
-                      <tr>
-                        ${res.headers.map(h => `<th>${h}</th>`).join('')}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${res.data.map(row => `
+              if (res.isProductSummary) {
+                const isStaffOrKasir = currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir');
+                
+                let totalQty = 0;
+                let totalOmset = 0;
+                let totalNetProfit = 0;
+                
+                res.data.forEach(item => {
+                  totalQty += Number(item.qty) || 0;
+                  totalOmset += Number(item.omset) || 0;
+                  totalNetProfit += Number(item.netProfit) || 0;
+                });
+
+                let html = `
+                  <div class="table-responsive">
+                    <table class="table">
+                      <thead>
                         <tr>
-                          ${row.map(cell => `<td>${cell}</td>`).join('')}
+                          <th>Nama Produk</th>
+                          <th style="text-align: right;">Qty</th>
+                          <th style="text-align: right;">Omset</th>
+                          ${!isStaffOrKasir ? '<th style="text-align: right;">Net Profit</th>' : ''}
                         </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
-                </div>
-              `;
-              container.innerHTML = html;
+                      </thead>
+                      <tbody>
+                        ${res.data.map(item => `
+                          <tr>
+                            <td>${escapeHtml(item.name)}</td>
+                            <td style="text-align: right;">${Number(item.qty) || 0}</td>
+                            <td style="text-align: right;">${formatCurrency(item.omset)}</td>
+                            ${!isStaffOrKasir ? `<td style="text-align: right;">${formatCurrency(item.netProfit)}</td>` : ''}
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                      <tfoot>
+                        <tr style="font-weight: bold; background: var(--bg-light); border-top: 2px solid var(--border-color);">
+                          <td>TOTAL</td>
+                          <td style="text-align: right;">${totalQty}</td>
+                          <td style="text-align: right;">${formatCurrency(totalOmset)}</td>
+                          ${!isStaffOrKasir ? `<td style="text-align: right;">${formatCurrency(totalNetProfit)}</td>` : ''}
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                `;
+                container.innerHTML = html;
+              } else {
+                let html = `
+                  <div class="table-responsive">
+                    <table class="table">
+                      <thead>
+                        <tr>
+                          ${res.headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${res.data.map(row => `
+                          <tr>
+                            ${row.map(cell => `<td>${cell}</td>`).join('')}
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                `;
+                container.innerHTML = html;
+              }
             } else {
               container.innerHTML = '<div style="color:red;padding:20px">' + (res.message || 'Gagal memuat data') + '</div>';
             }
