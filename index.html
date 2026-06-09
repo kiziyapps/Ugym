@@ -6622,6 +6622,14 @@ Terima kasih dan selamat berlatih!`;
     }
 
     // Modal Helpers
+    function toggleSessionsField() {
+      const type = document.getElementById('pkg_type').value;
+      const row = document.getElementById('sessions_row');
+      if (row) {
+        row.style.display = (type === 'PT') ? 'block' : 'none';
+      }
+    }
+
     function openPackageModal(id) {
       document.getElementById('packageModal').style.display = 'flex';
       if (id) {
@@ -6649,6 +6657,11 @@ Terima kasih dan selamat berlatih!`;
               document.getElementById('pkg_price').value = p['Harga'];
               document.getElementById('pkg_desc').value = p['Deskripsi'];
               document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE';
+              
+              if (document.getElementById('pkg_sessions')) {
+                document.getElementById('pkg_sessions').value = p['Jumlah Sesi'] !== undefined ? p['Jumlah Sesi'] : '';
+              }
+              toggleSessionsField();
             }
           })
           .withFailureHandler(function (err) {
@@ -6660,11 +6673,17 @@ Terima kasih dan selamat berlatih!`;
         document.getElementById('packageModalTitle').textContent = 'Tambah Paket';
         document.getElementById('pkg_id').value = '';
         document.getElementById('pkg_name').value = '';
+        document.getElementById('pkg_type').value = 'REGULAR';
         document.getElementById('pkg_duration').value = 1;
         document.getElementById('pkg_unit').value = 'Bulan';
         document.getElementById('pkg_price').value = 0;
         document.getElementById('pkg_desc').value = '';
         document.getElementById('pkg_active').checked = true;
+        
+        if (document.getElementById('pkg_sessions')) {
+          document.getElementById('pkg_sessions').value = '';
+        }
+        toggleSessionsField();
       }
     }
 
@@ -6674,17 +6693,24 @@ Terima kasih dan selamat berlatih!`;
       const durationVal = document.getElementById('pkg_duration').value;
       const unitVal = document.getElementById('pkg_unit').value;
       const fullDuration = `${durationVal} ${unitVal}`;
+      const typeVal = document.getElementById('pkg_type').value;
 
       const data = {
         'ID Paket': document.getElementById('pkg_id').value,
         'Nama Paket': document.getElementById('pkg_name').value,
-        'Tipe Paket': document.getElementById('pkg_type').value,
+        'Tipe Paket': typeVal,
         'Durasi': fullDuration,
         'Harga': document.getElementById('pkg_price').value,
         'Total Harga': document.getElementById('pkg_price').value,
         'Deskripsi': document.getElementById('pkg_desc').value,
         'Is Active': document.getElementById('pkg_active').checked
       };
+
+      if (typeVal === 'PT') {
+        data['Jumlah Sesi'] = document.getElementById('pkg_sessions').value;
+      } else {
+        data['Jumlah Sesi'] = '';
+      }
 
       if (!data['Nama Paket']) { showToast('Nama paket wajib diisi', 'warning'); return; }
 
@@ -7921,7 +7947,7 @@ Terima kasih dan selamat berlatih!`;
             }
             let html = '<option value="">-- Pilih Katalog PT --</option>';
             res.packages.forEach(p => {
-              html += `<option value="${p.id}" data-sessions="${p.duration}" data-price="${p.price}" data-name="${p.name}">${p.name} (${p.duration} Sesi)</option>`;
+              html += `<option value="${p.id}" data-sessions="${p.sessions}" data-price="${p.price}" data-name="${p.name}">${p.name} (${p.sessions} Sesi - Masa Aktif: ${p.duration})</option>`;
             });
             sel.innerHTML = html;
           } else {
@@ -7942,10 +7968,13 @@ Terima kasih dan selamat berlatih!`;
       if (!opt || !opt.value) return;
 
       const sessions = parseInt(opt.getAttribute('data-sessions')) || 10;
-      const price = parseInt(opt.getAttribute('data-price')) || 150000;
+      const packagePrice = parseInt(opt.getAttribute('data-price')) || 1500000;
+
+      // Perbaikan perhitungan harga/sesi: harga paket dibagi jumlah sesi
+      const pricePerSession = sessions > 0 ? Math.round(packagePrice / sessions) : 0;
 
       document.getElementById('pt_sessions').value = sessions;
-      document.getElementById('pt_price').value = price;
+      document.getElementById('pt_price').value = pricePerSession;
 
       updatePTSummary();
     }
@@ -8220,7 +8249,8 @@ Terima kasih dan selamat berlatih!`;
               totalSessions: sessions,
               pricePerSession: price,
               totalAmount: total, // Penting untuk dashboard revenue
-              paymentMethod: payment
+              paymentMethod: payment,
+              packageId: document.getElementById('pt_catalog')?.value || ''
             },
             currentUser?.name || 'Admin'
           ]);
@@ -9825,7 +9855,7 @@ Terima kasih dan selamat berlatih!`;
           </div>
           <div class="form-group">
             <label class="form-label">Tipe Paket</label>
-            <select id="pkg_type" class="form-input">
+            <select id="pkg_type" class="form-input" onchange="toggleSessionsField()">
               <option value="REGULAR">Regular</option>
               <option value="PT">Personal Trainer</option>
               <option value="VISIT">Visit / Harian</option>
@@ -9848,6 +9878,12 @@ Terima kasih dan selamat berlatih!`;
           <div class="form-group">
             <label class="form-label">Harga (Rp)</label>
             <input type="number" id="pkg_price" class="form-input" value="0">
+          </div>
+        </div>
+        <div class="form-row" id="sessions_row" style="display:none">
+          <div class="form-group">
+            <label class="form-label">Jumlah Sesi</label>
+            <input type="number" id="pkg_sessions" class="form-input" value="10" placeholder="Contoh: 10">
           </div>
         </div>
         <div class="form-group">
