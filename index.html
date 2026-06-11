@@ -8759,7 +8759,10 @@ Terima kasih dan selamat berlatih!`;
         sessions: data.sessions || '-'
       };
 
-      const waText = generateReceiptText(type, receiptData);
+      let waText = generateReceiptText(type, receiptData);
+      // Hilangkan rincian masa berlaku (Berlaku s/d) karena belum diaktivasi
+      waText = waText.replace(/Berlaku s\/d:\s*[^\n\r]*\n?/gi, '');
+      
       shareToWhatsApp(phone, waText);
     }
 
