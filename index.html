@@ -5470,6 +5470,8 @@ Terima kasih dan selamat berlatih!`;
 
       el.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat transaksi terakhir...</div>';
 
+      const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+
       google.script.run
         .withSuccessHandler(function (res) {
           if (res && res.success) {
@@ -5574,9 +5576,11 @@ Terima kasih dan selamat berlatih!`;
                             <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${rDataStr}')), 'membership')" title="Cetak Resi">
                               <i class="fas fa-print"></i>
                             </button>
+                            ${isAdmin ? `
                             <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.receiptNumber}')" title="Hapus Transaksi">
                               <i class="fas fa-trash"></i>
                             </button>
+                            ` : ''}
                           </div>
                         </td>
                       </tr>
@@ -6258,9 +6262,10 @@ Terima kasih dan selamat berlatih!`;
         </div>
 
         <div class="form-card">
-          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
+          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px">
             <h3 style="margin:0"><i class="fas fa-history"></i> Riwayat Update Inventaris</h3>
-            <div style="display:flex; gap:8px">
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap">
+              <input type="text" id="restock_product_filter" class="btn btn-sm btn-outline" style="padding:6px; width:150px" placeholder="Cari Produk / ID...">
               <input type="date" id="restock_start" class="btn btn-sm btn-outline" style="padding:4px">
               <input type="date" id="restock_end" class="btn btn-sm btn-outline" style="padding:4px">
               <button class="btn btn-sm btn-primary" onclick="loadRestockHistory()"><i class="fas fa-filter"></i></button>
@@ -6367,10 +6372,13 @@ Terima kasih dan selamat berlatih!`;
     function loadRestockHistory() {
       const start = document.getElementById('restock_start')?.value || '';
       const end = document.getElementById('restock_end')?.value || '';
+      const prodQuery = document.getElementById('restock_product_filter')?.value || '';
       const el = document.getElementById('restockHistoryTable');
       if (!el) return;
 
       el.innerHTML = '<div style="text-align:center; padding:20px"><i class="fas fa-spinner fa-spin"></i> Memuat riwayat...</div>';
+
+      const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
 
       google.script.run
         .withSuccessHandler(function (res) {
@@ -6386,6 +6394,7 @@ Terima kasih dan selamat berlatih!`;
                       <th>Awal</th>
                       <th>Baru</th>
                       <th>Oleh</th>
+                      ${isAdmin ? '<th>Aksi</th>' : ''}
                     </tr>
                   </thead>
                   <tbody>
@@ -6397,6 +6406,13 @@ Terima kasih dan selamat berlatih!`;
                         <td>${h['Tipe'] === 'Stok' ? h['Stok Awal'] : formatCurrency(h['Harga Awal'])}</td>
                         <td><b style="color:#10b981">${h['Tipe'] === 'Stok' ? h['Stok Baru'] : formatCurrency(h['Harga Baru'])}</b></td>
                         <td><small>${h['User']}</small></td>
+                        ${isAdmin ? `
+                          <td>
+                            <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteRestockUI('${h['ID Restock']}')" title="Hapus Riwayat">
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </td>
+                        ` : ''}
                       </tr>
                     `).join('')}
                   </tbody>
@@ -6407,7 +6423,7 @@ Terima kasih dan selamat berlatih!`;
             el.innerHTML = '<div style="text-align:center; padding:20px; color:#94a3b8">Belum ada riwayat update pada periode ini.</div>';
           }
         })
-        .getFilteredRestockHistory(start, end);
+        .getFilteredRestockHistory(start, end, prodQuery);
     }
 
     let html5QrReader = null;
@@ -6655,6 +6671,7 @@ Terima kasih dan selamat berlatih!`;
               }
 
               document.getElementById('pkg_price').value = p['Harga'];
+              document.getElementById('pkg_promo').value = p['Promo'] || 0;
               document.getElementById('pkg_desc').value = p['Deskripsi'];
               document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE';
               
@@ -6677,6 +6694,7 @@ Terima kasih dan selamat berlatih!`;
         document.getElementById('pkg_duration').value = 1;
         document.getElementById('pkg_unit').value = 'Bulan';
         document.getElementById('pkg_price').value = 0;
+        document.getElementById('pkg_promo').value = 0;
         document.getElementById('pkg_desc').value = '';
         document.getElementById('pkg_active').checked = true;
         
@@ -6695,13 +6713,18 @@ Terima kasih dan selamat berlatih!`;
       const fullDuration = `${durationVal} ${unitVal}`;
       const typeVal = document.getElementById('pkg_type').value;
 
+      const priceVal = parseFloat(document.getElementById('pkg_price').value) || 0;
+      const promoVal = parseFloat(document.getElementById('pkg_promo').value) || 0;
+      const totalVal = priceVal - promoVal;
+
       const data = {
         'ID Paket': document.getElementById('pkg_id').value,
         'Nama Paket': document.getElementById('pkg_name').value,
         'Tipe Paket': typeVal,
         'Durasi': fullDuration,
-        'Harga': document.getElementById('pkg_price').value,
-        'Total Harga': document.getElementById('pkg_price').value,
+        'Harga': priceVal,
+        'Promo': promoVal,
+        'Total Harga': totalVal,
         'Deskripsi': document.getElementById('pkg_desc').value,
         'Is Active': document.getElementById('pkg_active').checked
       };
@@ -7171,6 +7194,7 @@ Terima kasih dan selamat berlatih!`;
           // Tambahkan data dari server
           list.forEach(c => combined.push(c));
 
+          const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
           if (combined.length > 0) {
             el.innerHTML = `
               <div style="overflow-x:auto">
@@ -7184,6 +7208,7 @@ Terima kasih dan selamat berlatih!`;
                       <th>Tipe</th>
                       <th>Status</th>
                       <th>Keterangan</th>
+                      ${isAdmin ? '<th>Aksi</th>' : ''}
                     </tr>
                   </thead>
                   <tbody>
@@ -7198,6 +7223,15 @@ Terima kasih dan selamat berlatih!`;
                           <td><span class="badge badge-${typeClass}">${c.type || 'Member'}</span></td>
                           <td><span class="badge badge-success">Aktif</span></td>
                           <td><small class="text-muted">${escapeHtml(c.notes || '-')}</small></td>
+                          ${isAdmin ? `
+                            <td>
+                              ${c.id ? `
+                                <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteCheckinUI('${c.id}')" title="Hapus Check-in">
+                                  <i class="fas fa-trash"></i>
+                                </button>
+                              ` : '<small class="text-muted">Syncing...</small>'}
+                            </td>
+                          ` : ''}
                         </tr>
                       `;
                     }).join('')}
@@ -8416,6 +8450,8 @@ Terima kasih dan selamat berlatih!`;
         .getPendingApprovalCount();
     }
 
+    let currentApprovals = [];
+
     function loadApprovals() {
       document.getElementById('contentArea').innerHTML = `
         <div id="approvalsContainer">
@@ -8436,6 +8472,7 @@ Terima kasih dan selamat berlatih!`;
 
     function renderApprovals(res) {
       const list = (res && res.success) ? res.approvals : [];
+      currentApprovals = list;
       const el = document.getElementById('approvalsContainer');
       if (!el) return;
 
@@ -8547,10 +8584,49 @@ Terima kasih dan selamat berlatih!`;
         function (ok) {
           if (!ok) return;
           
-          SyncQueue.add('approvePaymentOnly', [id, currentUser?.name || 'Admin', payDate]);
-          
-          showToast('Approval pembayaran dimasukkan ke antrean', 'success');
-          setTimeout(loadApprovals, 500);
+          showLoading('Menyetujui pembayaran...');
+          google.script.run
+            .withSuccessHandler(function (res) {
+              hideLoading();
+              if (res && res.success) {
+                showToast(res.message, 'success');
+                
+                const approval = currentApprovals.find(a => a.approvalId === id);
+                loadApprovals();
+                
+                if (approval) {
+                  const data = approval.data || {};
+                  const receiptNumber = res.receiptNumber || '-';
+                  const waText = `*PEMBAYARAN DITERIMA - UGYM*\n` +
+                    `--------------------------------\n` +
+                    `Halo *${approval.memberName || 'Member'}*,\n\n` +
+                    `Pembayaran Anda telah kami terima dan diverifikasi.\n\n` +
+                    `*Rincian Pembayaran:*\n` +
+                    `• No. Kwitansi: ${receiptNumber}\n` +
+                    `• Paket: ${data.package || '-'}\n` +
+                    `• Total: ${formatCurrency(data.amount || 0)}\n\n` +
+                    `--------------------------------\n` +
+                    `⏳ *Langkah Selanjutnya:*\n` +
+                    `Akun Anda sedang dalam proses *Aktivasi* oleh Admin. Anda akan menerima pemberitahuan berikutnya beserta Kode QR setelah masa berlaku diaktifkan.\n\n` +
+                    `Terima kasih telah bergabung dengan UGYM! 💪`;
+                  
+                  setTimeout(() => {
+                    showConfirm('Pembayaran berhasil disetujui! Apakah Anda ingin mengirim pesan konfirmasi WhatsApp ke member?', function(waOk) {
+                      if (waOk) {
+                        shareToWhatsApp(data.phone, waText);
+                      }
+                    });
+                  }, 600);
+                }
+              } else {
+                showToast(res ? res.message : 'Gagal menyetujui pembayaran', 'error');
+              }
+            })
+            .withFailureHandler(function (err) {
+              hideLoading();
+              showToast('Gagal: ' + err.message, 'error');
+            })
+            .approvePaymentOnly(id, currentUser?.name || 'Admin', payDate);
         }
       );
     }
@@ -8565,10 +8641,22 @@ Terima kasih dan selamat berlatih!`;
         function (ok) {
           if (!ok) return;
 
-          SyncQueue.add('approveActivationOnly', [id, currentUser?.name || 'Admin', startDate]);
-          
-          showToast('Aktivasi member dimasukkan ke antrean', 'success');
-          setTimeout(loadApprovals, 500);
+          showLoading('Mengaktivasi member...');
+          google.script.run
+            .withSuccessHandler(function (res) {
+              hideLoading();
+              if (res && res.success) {
+                showToast(res.message, 'success');
+                loadApprovals();
+              } else {
+                showToast(res ? res.message : 'Gagal mengaktivasi member', 'error');
+              }
+            })
+            .withFailureHandler(function (err) {
+              hideLoading();
+              showToast('Gagal: ' + err.message, 'error');
+            })
+            .approveActivationOnly(id, currentUser?.name || 'Admin', startDate);
         }
       );
     }
@@ -8895,6 +8983,8 @@ Terima kasih dan selamat berlatih!`;
         </div>
       `;
 
+      const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+
       google.script.run
         .withSuccessHandler(function (res) {
           const el = document.getElementById('adminDataView');
@@ -8952,9 +9042,11 @@ Terima kasih dan selamat berlatih!`;
                         <td>${formatDateTime(t.transactionDate)}</td>
                         <td><span class="badge badge-success">Berhasil</span></td>
                         <td>
+                          ${isAdmin ? `
                           <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.receiptNumber}')" title="Hapus Transaksi">
                             <i class="fas fa-trash"></i>
                           </button>
+                          ` : ''}
                         </td>
                       </tr>
                     `).join('')}
@@ -9879,6 +9971,10 @@ Terima kasih dan selamat berlatih!`;
             <label class="form-label">Harga (Rp)</label>
             <input type="number" id="pkg_price" class="form-input" value="0">
           </div>
+          <div class="form-group">
+            <label class="form-label">Promo / Cashback (Rp)</label>
+            <input type="number" id="pkg_promo" class="form-input" value="0">
+          </div>
         </div>
         <div class="form-row" id="sessions_row" style="display:none">
           <div class="form-group">
@@ -10593,6 +10689,8 @@ Terima kasih dan selamat berlatih!`;
 
       container.innerHTML = '<div style="text-align:center; padding:40px; color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
 
+      const isAdmin = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Super Admin');
+
       google.script.run
         .withSuccessHandler(function (res) {
           if (res.success) {
@@ -10636,9 +10734,11 @@ Terima kasih dan selamat berlatih!`;
                       <div style="text-align:right">
                         ${formatCurrency(t.Total)}
                         <div style="font-size:11px; color:#8E8E93; font-weight:normal">${t['Metode Pembayaran']}</div>
+                        ${isAdmin ? `
                         <button class="btn btn-sm btn-outline" style="padding:2px 6px; color:#ef4444; border-color:#ef4444; margin-top:4px" onclick="event.stopPropagation(); deleteTransactionUI('${t['ID Transaksi']}')" title="Hapus Transaksi">
                           <i class="fas fa-trash"></i> Hapus
                         </button>
+                        ` : ''}
                       </div>
                     </div>
                   </div>
@@ -10699,6 +10799,62 @@ Terima kasih dan selamat berlatih!`;
             showToast('Error: ' + err.message, 'error');
           })
           .deleteTransaction(transactionId, reason.trim(), currentUser?.name || 'Admin');
+      });
+    }
+
+    function deleteCheckinUI(checkinId) {
+      if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Super Admin')) {
+        showToast('Hanya admin yang dapat menghapus check-in!', 'warning');
+        return;
+      }
+      showConfirm('Anda yakin ingin menghapus data check-in ini? Jika ini adalah check-in PT, sesi PT member akan dikembalikan.', function (ok) {
+        if (!ok) return;
+        
+        showLoading('Menghapus check-in...');
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res.success) {
+              showToast(res.message, 'success');
+              loadTodayCheckins();
+            } else {
+              showToast(res.message, 'error');
+            }
+          })
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal: ' + err.message, 'error');
+          })
+          .deleteCheckin(checkinId, currentUser?.name || 'Admin');
+      });
+    }
+
+    function deleteRestockUI(restockId) {
+      if (!currentUser || (currentUser.role !== 'Admin' && currentUser.role !== 'Super Admin')) {
+        showToast('Hanya admin yang dapat menghapus riwayat stok!', 'warning');
+        return;
+      }
+      showConfirm('Anda yakin ingin menghapus riwayat pembaruan stok ini? Stok produk terkait akan dikembalikan ke nilai sebelum pembaruan.', function (ok) {
+        if (!ok) return;
+        
+        showLoading('Menghapus riwayat stok...');
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res.success) {
+              showToast(res.message, 'success');
+              loadRestockHistory();
+              if (typeof loadPOSProducts === 'function') loadPOSProducts(true);
+              if (typeof loadCatalogView === 'function' && document.getElementById('catalogProductsTable')) loadCatalogProducts();
+            } else {
+              showToast(res.message, 'error');
+            }
+          })
+          .withFailureHandler(function (err) {
+            hideLoading();
+            showToast('Gagal: ' + err.message, 'error');
+          })
+          .deleteRestockRecord(restockId, currentUser?.name || 'Admin');
       });
     }
 
