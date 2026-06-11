@@ -6422,9 +6422,21 @@ Terima kasih dan selamat berlatih!`;
                       <tr>
                         <td><small>${formatDateTime(h['Waktu'])}</small></td>
                         <td><b>${escapeHtml(h['Nama Produk'])}</b><br><small>${h['ID Produk']}</small></td>
-                        <td><span class="badge badge-${h['Tipe'] === 'Stok' ? 'info' : 'warning'}">${h['Tipe']}</span></td>
-                        <td>${h['Tipe'] === 'Stok' ? h['Stok Awal'] : formatCurrency(h['Harga Awal'])}</td>
-                        <td><b style="color:#10b981">${h['Tipe'] === 'Stok' ? h['Stok Baru'] : formatCurrency(h['Harga Baru'])}</b></td>
+                        <td>
+                          ${(() => {
+                            let badgeClass = 'secondary';
+                            if (h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru') badgeClass = 'info';
+                            else if (h['Tipe'] === 'Penjualan') badgeClass = 'danger';
+                            else if (h['Tipe'] === 'Penyesuaian') badgeClass = 'warning';
+                            return `<span class="badge badge-${badgeClass}">${h['Tipe']}</span>`;
+                          })()}
+                        </td>
+                        <td>${(h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru' || h['Tipe'] === 'Penjualan' || h['Tipe'] === 'Penyesuaian') ? h['Stok Awal'] : formatCurrency(h['Harga Awal'])}</td>
+                        <td>
+                          <b style="color:${h['Tipe'] === 'Penjualan' ? '#ef4444' : '#10b981'}">
+                            ${(h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru' || h['Tipe'] === 'Penjualan' || h['Tipe'] === 'Penyesuaian') ? h['Stok Baru'] : formatCurrency(h['Harga Baru'])}
+                          </b>
+                        </td>
                         <td><small>${h['User']}</small></td>
                         ${isAdmin ? `
                           <td>
