@@ -8531,14 +8531,7 @@ Terima kasih dan selamat berlatih!`;
                   
                   <div style="background:#f8fafc;border-radius:8px;padding:12px;margin:12px 0">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
-                      <div>
-                        <span class="text-muted">📞 Telepon:</span> ${escapeHtml(data.phone || '-')}
-                        ${data.phone ? `
-                          <button class="btn btn-sm" style="background:#25D366; color:white; padding:2px 6px; font-size:10px; margin-left:6px; display:inline-flex; align-items:center; justify-content:center" onclick="shareToWhatsApp('${escapeHtml(data.phone)}', 'Halo *${escapeHtml(a.memberName || 'Member')}*, kami menghubungi Anda terkait pengajuan ${a.type === 'Registration' ? 'pendaftaran' : 'perpanjangan'} paket ${escapeHtml(data.package || '')} di UGYM.')" title="Hubungi via WhatsApp">
-                            <i class="fab fa-whatsapp"></i>
-                          </button>
-                        ` : ''}
-                      </div>
+                      <div><span class="text-muted">📞 Telepon:</span> ${escapeHtml(data.phone || '-')}</div>
                       <div><span class="text-muted">📧 Email:</span> ${escapeHtml(data.email || '-')}</div>
                       <div><span class="text-muted">📦 Paket:</span> <b>${escapeHtml(data.package || '-')}</b></div>
                       <div><span class="text-muted">💰 Total:</span> <b style="color:#22c55e">${formatCurrency(data.amount || 0)}</b></div>
@@ -8571,6 +8564,11 @@ Terima kasih dan selamat berlatih!`;
                   ` : ''}
                   
                   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
+                    ${data.phone ? `
+                      <button class="btn btn-sm" style="background:#25D366; color:white; padding:4px 8px; display:inline-flex; align-items:center; gap:6px; font-weight:600" onclick="shareApprovalWA('${escapeHtml(a.approvalId)}')" title="Kirim WA">
+                        <i class="fab fa-whatsapp"></i> Kirim WA
+                      </button>
+                    ` : ''}
                     ${a.status === 'Paid' ? `
                       <div style="flex:1; display:flex; flex-direction:column; gap:4px">
                         <span class="badge badge-success" style="padding:6px 10px; font-size:10px; width:fit-content">
@@ -8704,6 +8702,65 @@ Terima kasih dan selamat berlatih!`;
         showToast('Penolakan dimasukkan ke antrean', 'success');
         setTimeout(loadApprovals, 500);
       });
+    }
+
+    function shareApprovalWA(approvalId) {
+      const approval = currentApprovals.find(a => a.approvalId === approvalId);
+      if (!approval) {
+        showToast('Data approval tidak ditemukan', 'warning');
+        return;
+      }
+      
+      const data = approval.data || {};
+      const phone = data.phone;
+      if (!phone) {
+        showToast('Nomor HP member tidak ditemukan', 'warning');
+        return;
+      }
+
+      // Cari nomor resi dari notes jika ada
+      const notes = approval.notes || '';
+      const receiptMatch = notes.match(/Receipt:\s*([^\s\n\r]+)/i);
+      const receiptNumber = receiptMatch ? receiptMatch[1] : 'PENDING';
+      
+      let type = 'extension';
+      if (approval.type === 'Registration') type = 'registration';
+      else if (approval.type === 'PT' || (data.package && data.package.toLowerCase().includes('pt'))) type = 'pt';
+      
+      // Jika statusnya masih 'Pending' (belum di-approve bayar), buat pesan konfirmasi
+      if (approval.status === 'Pending') {
+        const text = `*KONFIRMASI PENDAFTARAN - UGYM*\n` +
+          `--------------------------------\n` +
+          `Halo *${approval.memberName || 'Member'}*,\n\n` +
+          `Kami menerima pengajuan ${approval.type === 'Registration' ? 'pendaftaran' : 'perpanjangan'} Anda.\n\n` +
+          `*Detail Pengajuan:*\n` +
+          `• Paket: ${data.package || '-'}\n` +
+          `• Total Pembayaran: ${formatCurrency(data.amount || 0)}\n` +
+          `• Status: Menunggu Verifikasi Pembayaran\n\n` +
+          `Jika Anda sudah melakukan transfer, mohon kirimkan kembali bukti transfer yang valid agar dapat kami verifikasi segera.\n\n` +
+          `Terima kasih! UGYM 💪`;
+        shareToWhatsApp(phone, text);
+        return;
+      }
+
+      // Jika statusnya 'Paid' (sudah di-approve bayar), buat kwitansi resmi menggunakan generateReceiptText
+      const qrUrl = data.qrUrl || data.qr || '';
+      const receiptData = {
+        memberId: approval.memberId || 'TEMP',
+        name: approval.memberName || 'Member',
+        package: data.package || '-',
+        expiry: approval.expiryDate || '-',
+        receipt: receiptNumber,
+        price: data.price || data.amount || 0,
+        total: data.amount || 0,
+        payment: data.paymentMethod || 'Transfer',
+        qr: qrUrl,
+        trainer: data.trainer || '-',
+        sessions: data.sessions || '-'
+      };
+
+      const waText = generateReceiptText(type, receiptData);
+      shareToWhatsApp(phone, waText);
     }
 
     // ================ ADMIN PANEL ================
