@@ -4,6 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrasi Member - UGYM</title>
+  <!-- Browser Update Notification -->
+  <script>
+    var $buoop = {
+      required: {e:-3, f:-3, o:-3, s:-1, c:-3},
+      insecure: true,
+      api: 2026.06,
+      text: {
+        "msg": "Browser Anda ({browser_name}) sudah terlalu usang atau memerlukan pembaruan.",
+        "msgtooold": "Browser Anda tidak kompatibel dengan sistem ini. Harap perbarui.",
+        "bup": "Perbarui Browser Sekarang",
+        "bno": "Abaikan"
+      }
+    };
+    function $buo_f(){
+      var e = document.createElement("script");
+      e.src = "//browser-update.org/update.min.js";
+      document.body.appendChild(e);
+    };
+    try {document.addEventListener("DOMContentLoaded", $buo_f, false)}
+    catch(e){window.attachEvent("onload", $buo_f)}
+  </script>
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRbU5_SWLs15kuq-E9wm4TEoPNX0APOrg4TVv249sH4wAbA7So6a_SIjk1v9hwoXHEhA/exec';
     const google = {
