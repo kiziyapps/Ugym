@@ -8,7 +8,7 @@
   <!-- Browser Update Notification -->
   <script>
     var $buoop = {
-      required: {e:-3, f:-3, o:-3, s:-1, c:-3},
+      required: { e: -3, f: -3, o: -3, s: -1, c: -3 },
       insecure: true,
       api: 2026.06,
       text: {
@@ -18,13 +18,13 @@
         "bno": "Abaikan"
       }
     };
-    function $buo_f(){
+    function $buo_f() {
       var e = document.createElement("script");
       e.src = "//browser-update.org/update.min.js";
       document.body.appendChild(e);
     };
-    try {document.addEventListener("DOMContentLoaded", $buo_f, false)}
-    catch(e){window.attachEvent("onload", $buo_f)}
+    try { document.addEventListener("DOMContentLoaded", $buo_f, false) }
+    catch (e) { window.attachEvent("onload", $buo_f) }
   </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
@@ -151,7 +151,7 @@
         });
       }
     };
-    
+
     const FollowupTracker = {
       key: 'ugym_followup_tracking',
       get(id, type, val) {
@@ -187,14 +187,14 @@
 
         // Jalankan sync pertama kali setelah login
         if (currentUser) this.start();
-        
+
         // Listeners untuk perubahan koneksi
         window.addEventListener('online', () => this.updateIndicator('online', 'Online'));
         window.addEventListener('offline', () => this.updateIndicator('offline', 'Offline'));
-        
+
         // Cek status awal
         if (!navigator.onLine) this.updateIndicator('offline', 'Offline');
-        
+
         // Jalankan proses queue jika ada sisa
         SyncQueue.process();
       },
@@ -234,7 +234,7 @@
 
               // Trigger event untuk UI yang butuh update
               window.dispatchEvent(new CustomEvent('ugym_sync_complete', { detail: res.data }));
-              
+
               self.updateIndicator('success', 'Updated!');
               setTimeout(() => self.updateIndicator('online', 'Online'), 3000);
             }
@@ -338,7 +338,7 @@
         modal.className = 'modal-overlay';
         modal.style.display = 'flex';
         modal.style.zIndex = '10000';
-        
+
         let itemsHtml = '';
         if (type === 'pos') {
           itemsHtml = data.items.map(it => `
@@ -417,7 +417,7 @@
         `;
         document.body.appendChild(modal);
       },
-      printReceiptContent: function() {
+      printReceiptContent: function () {
         const contentArea = document.getElementById('receiptPrintableArea');
         if (!contentArea) return;
         const content = contentArea.innerHTML;
@@ -472,7 +472,7 @@
               <td><small class="text-muted">Sedang sinkronisasi...</small></td>
             `;
             tbody.insertBefore(row, tbody.firstChild);
-            
+
             // Fade out the highlight
             setTimeout(() => { row.style.background = 'transparent'; }, 2000);
           }
@@ -481,7 +481,7 @@
       removeCheckin: function (memberId) {
         const row = document.getElementById('opt_ci_' + memberId);
         if (row) row.parentNode.removeChild(row);
-        
+
         const dashCheckins = document.getElementById('dash_checkinsToday');
         if (dashCheckins) {
           const current = parseInt(dashCheckins.textContent) || 0;
@@ -537,13 +537,13 @@
             .withSuccessHandler(res => {
               // Hapus dari antrean jika server berhasil dijangkau (meskipun ada error logika seperti member tidak ditemukan/sudah checkin)
               self.remove(item.id);
-              
+
               if (res && res.success) {
                 console.log('✅ Queue Item Processed:', item.action);
               } else {
                 console.warn('⚠️ Queue Action Handled with Logic Error:', item.action, res?.message);
               }
-              
+
               // Lanjut ke antrean berikutnya
               processNext(0);
             })
@@ -551,7 +551,7 @@
               console.warn('❌ Queue Network/System Failure:', item.action, err);
               self.isProcessing = false; // Stop processing for now, wait for next trigger
             })
-            [item.action](...item.args);
+          [item.action](...item.args);
         };
 
         processNext(0);
@@ -761,7 +761,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
     }
 
     .sidebar-overlay {
@@ -802,7 +802,8 @@
 
     .main-content {
       flex: 1;
-      padding: 0; /* Changed from 32px to 0 for sticky header support */
+      padding: 0;
+      /* Changed from 32px to 0 for sticky header support */
       margin-left: 0;
       background: var(--bg-light);
       height: 100vh;
@@ -964,25 +965,44 @@
       border-radius: 50%;
       transition: all 0.3s ease;
     }
-    .status-dot.online { background: #34C759; box-shadow: 0 0 8px rgba(52, 199, 89, 0.6); }
-    .status-dot.syncing { 
-      background: #FF9500; 
+
+    .status-dot.online {
+      background: #34C759;
+      box-shadow: 0 0 8px rgba(52, 199, 89, 0.6);
+    }
+
+    .status-dot.syncing {
+      background: #FF9500;
       box-shadow: 0 0 10px rgba(255, 149, 0, 0.8);
       animation: pulseSync 1s infinite;
     }
-    .status-dot.success { 
-      background: #007AFF; 
+
+    .status-dot.success {
+      background: #007AFF;
       box-shadow: 0 0 15px rgba(0, 122, 255, 0.9);
       transform: scale(1.3);
     }
-    .status-dot.offline { 
-      background: #FF3B30; 
-      box-shadow: 0 0 10px rgba(255, 59, 48, 0.8); 
+
+    .status-dot.offline {
+      background: #FF3B30;
+      box-shadow: 0 0 10px rgba(255, 59, 48, 0.8);
     }
+
     @keyframes pulseSync {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.2); }
-      100% { opacity: 1; transform: scale(1); }
+      0% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     /* Widgets & Form Elements */
@@ -1324,12 +1344,12 @@
       background: var(--primary-light) !important;
       border-left: 4px solid #10b981 !important;
     }
-    
+
     .list-item.contacted .list-item-title {
       text-decoration: line-through;
       color: #94a3b8;
     }
-    
+
     .followup-checkbox {
       width: 18px;
       height: 18px;
@@ -3028,9 +3048,11 @@
           <div>
             <div style="display:flex; align-items:center; gap:8px">
               <h1 id="pageTitle" style="font-size:18px;color:var(--text-main);font-weight:700;margin:0">Dashboard</h1>
-              <div style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:10px; border:0.5px solid var(--border-color)">
+              <div
+                style="display:flex; align-items:center; gap:6px; background:rgba(0,0,0,0.05); padding:2px 8px; border-radius:10px; border:0.5px solid var(--border-color)">
                 <div id="syncStatusDot" class="status-dot online" title="Live Sync Status"></div>
-                <span id="syncStatusText" style="font-size:9px; opacity:0.7; font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Online</span>
+                <span id="syncStatusText"
+                  style="font-size:9px; opacity:0.7; font-weight:600; text-transform:uppercase; letter-spacing:0.5px">Online</span>
               </div>
             </div>
             <p id="pageSubtitle" style="color:var(--text-secondary);margin-top:2px;font-size:11px;margin:0"></p>
@@ -3038,15 +3060,17 @@
         </div>
         <div style="display:flex; gap:20px; align-items:center">
           <div id="lastSyncTime" style="font-size:10px; color:var(--text-secondary); font-family:monospace"></div>
-          
-          <div style="display:flex; align-items:center; gap:12px; border-left: 1px solid var(--border-color); padding-left: 20px">
+
+          <div
+            style="display:flex; align-items:center; gap:12px; border-left: 1px solid var(--border-color); padding-left: 20px">
             <div style="text-align:right; line-height:1.2">
               <div id="userName" style="font-size:13px; font-weight:700; color:var(--text-main)">-</div>
               <div id="userRole" style="font-size:10px; color:var(--text-secondary)">-</div>
             </div>
-            <img id="userPic" src="https://i.imgur.com/PAB0dhW.png" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--primary-light)">
+            <img id="userPic" src="https://i.imgur.com/PAB0dhW.png"
+              style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid var(--primary-light)">
           </div>
-          
+
           <button class="btn btn-outline btn-sm" onclick="refreshPage()" style="padding: 6px 12px">
             <i class="fas fa-sync-alt"></i>
           </button>
@@ -3136,7 +3160,7 @@
 
     function formatDate(d) {
       if (!d || d === '-') return '-';
-      
+
       // Handle DD/MM/YYYY format from backend
       if (typeof d === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
         const parts = d.split('/');
@@ -3976,7 +4000,7 @@ Terima kasih dan selamat berlatih!`;
       let pendingPTSalesCount = queue.filter(q => q.action === 'registerPTSession').length;
       let pendingVisitSalesCount = queue.filter(q => q.action === 'processVisitCheckIn').length;
       let pendingPOSCount = queue.filter(q => q.action === 'processPOSTransaction').length;
-      
+
       // Hitung Omzet Pending
       let pendingExtensionRev = queue.filter(q => q.action === 'processTransaction').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
       let pendingPTSalesRev = queue.filter(q => q.action === 'registerPTSession').reduce((sum, q) => sum + (q.args[0]?.totalAmount || 0), 0);
@@ -3986,7 +4010,7 @@ Terima kasih dan selamat berlatih!`;
 
       let pendingPOSRev = queue.filter(q => q.action === 'processPOSTransaction').reduce((sum, q) => sum + (q.args[0]?.total || 0), 0);
       let pendingExpenses = queue.filter(q => q.action === 'saveExpense').reduce((sum, q) => sum + (q.args[0]?.amount || 0), 0);
-      
+
       let pendingRegularCheckins = queue.filter(q => q.action === 'processCheckIn').length;
       let pendingPTCheckins = queue.filter(q => q.action === 'processCheckInWithPT').length;
       let pendingVisitCheckins = queue.filter(q => q.action === 'processVisitCheckIn').length;
@@ -3999,38 +4023,38 @@ Terima kasih dan selamat berlatih!`;
       if (document.getElementById('labelNewRegistrationsCount')) document.getElementById('labelNewRegistrationsCount').textContent = 'Member Baru';
       if (document.getElementById('statExpiring')) document.getElementById('statExpiring').textContent = s.expiring || 0;
       if (document.getElementById('statExpired')) document.getElementById('statExpired').textContent = s.expired || 0;
-      
+
       // 2. KUNJUNGAN & AKTIVITAS HARIAN
       if (document.getElementById('statRegularCheckins')) document.getElementById('statRegularCheckins').textContent = (s.regularCheckinsCount || 0) + pendingRegularCheckins;
       if (document.getElementById('statPTCheckins')) document.getElementById('statPTCheckins').textContent = (s.ptCheckinsCount || 0) + pendingPTCheckins;
       if (document.getElementById('statVisitCheckins')) document.getElementById('statVisitCheckins').textContent = (s.visitCheckinsCount || 0) + pendingVisitCheckins;
       if (document.getElementById('statGallery')) document.getElementById('statGallery').textContent = s.galleryCount || 0;
       if (document.getElementById('statBirthday')) document.getElementById('statBirthday').textContent = s.birthdayCount || 0;
-      
+
       // 3. FINANSIAL & PENJUALAN
       if (document.getElementById('statRenewals')) document.getElementById('statRenewals').textContent = (s.renewalsCount || 0) + pendingExtensionCount;
       if (document.getElementById('labelRenewalsRevenue')) document.getElementById('labelRenewalsRevenue').textContent = 'Omset: ' + formatCurrency((s.renewalsRevenue || 0) + pendingExtensionRev);
       if (document.getElementById('statRegRevenueCount')) document.getElementById('statRegRevenueCount').textContent = (s.newRegistrationsCount || 0) + pendingMemberCount;
       if (document.getElementById('labelNewRegistrationsRevenue')) document.getElementById('labelNewRegistrationsRevenue').textContent = 'Omset: ' + formatCurrency((s.newRegistrationsRevenue || 0) + pendingNewRegistrationsRev);
-      
+
       if (document.getElementById('statPTSales')) document.getElementById('statPTSales').textContent = (s.ptSalesCount || 0) + pendingPTSalesCount;
       if (document.getElementById('labelPTRevenue')) document.getElementById('labelPTRevenue').textContent = 'Omset: ' + formatCurrency((s.ptSalesRevenue || 0) + pendingPTSalesRev);
-      
+
       if (document.getElementById('statVisitSales')) document.getElementById('statVisitSales').textContent = (s.visitSalesCount || 0) + pendingVisitSalesCount;
       if (document.getElementById('labelVisitRevenue')) document.getElementById('labelVisitRevenue').textContent = 'Omset: ' + formatCurrency((s.visitSalesRevenue || 0) + pendingVisitSalesRev);
-      
+
       if (document.getElementById('statPOSCount')) document.getElementById('statPOSCount').textContent = (s.posTransactionsCount || 0) + pendingPOSCount;
       if (document.getElementById('labelPOSRevenueDetail')) document.getElementById('labelPOSRevenueDetail').textContent = 'Omset: ' + formatCurrency((s.posRevenue || 0) + pendingPOSRev);
-      
+
       if (document.getElementById('statPending')) document.getElementById('statPending').textContent = s.pendingApprovals || 0;
       if (document.getElementById('statDeletedTransactions')) document.getElementById('statDeletedTransactions').textContent = s.deletedCount || 0;
-      
+
       const totalFitnessRevenue = (s.revenue || 0) + totalPendingFitnessRev;
       if (document.getElementById('statFitnessRevenue')) document.getElementById('statFitnessRevenue').textContent = formatCurrency(totalFitnessRevenue);
 
       const totalPOSRevenue = (s.posRevenue || 0) + pendingPOSRev;
       if (document.getElementById('statPOSRevenue')) document.getElementById('statPOSRevenue').textContent = formatCurrency(totalPOSRevenue);
-      
+
       const totalExpenses = (s.expenses || 0) + pendingExpenses;
       if (document.getElementById('statExpenses')) document.getElementById('statExpenses').textContent = formatCurrency(totalExpenses);
 
@@ -4039,7 +4063,7 @@ Terima kasih dan selamat berlatih!`;
       const netProfit = totalFitnessNetProfit + totalPOSNetProfit;
 
       if (document.getElementById('statNetProfit')) document.getElementById('statNetProfit').textContent = formatCurrency(netProfit);
-      
+
       // Update Detailed Net Profits
       if (document.getElementById('statFitnessNetProfit')) document.getElementById('statFitnessNetProfit').textContent = formatCurrency(totalFitnessNetProfit);
       if (document.getElementById('statPOSNetProfit')) document.getElementById('statPOSNetProfit').textContent = formatCurrency(totalPOSNetProfit);
@@ -4047,7 +4071,7 @@ Terima kasih dan selamat berlatih!`;
       // Hide financial stats for Staff & Kasir
       if (typeof currentUser !== 'undefined' && currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir')) {
         const financialStats = [
-          'statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit', 
+          'statFitnessRevenue', 'statPOSRevenue', 'statExpenses', 'statNetProfit', 'statFitnessNetProfit', 'statPOSNetProfit',
           'labelRenewalsRevenue', 'labelPTRevenue', 'labelVisitRevenue', 'labelPOSRevenueDetail', 'labelNewRegistrationsRevenue'
         ];
         financialStats.forEach(id => {
@@ -4289,7 +4313,7 @@ Terima kasih dan selamat berlatih!`;
               updatePaymentInfo();
             });
           });
-          
+
           // Load recent transactions
           loadRecentPanelTransactions('Registration', 'regRecentTransactions');
         })
@@ -5246,7 +5270,7 @@ Terima kasih dan selamat berlatih!`;
           newExpiry = new Date(currentExp);
         }
         newExpiry.setDate(newExpiry.getDate() + durationDays);
-        
+
         LocalCache.update('all_members', (members) => {
           const list = Array.isArray(members) ? members : [];
           return list.map(m => {
@@ -5285,7 +5309,7 @@ Terima kasih dan selamat berlatih!`;
           },
           currentUser?.name || 'Admin'
         ]);
-        
+
         showToast('Transaksi dimasukkan ke antrean', 'success');
       });
     }
@@ -5426,11 +5450,11 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           if (res && res.success) {
             let list = res.transactions || [];
-            
+
             // INTEGRASI DATA LOKAL (OPTIMISTIC UI)
             const queue = SyncQueue.get();
             const pending = queue.filter(q => q.action === 'processPOSTransaction');
-            
+
             pending.forEach(p => {
               const data = p.args[0] || {};
               list.unshift({
@@ -5474,7 +5498,7 @@ Terima kasih dan selamat berlatih!`;
                         <td><small>${t.cashier}</small></td>
                         <td>
                           <div style="display:flex;gap:4px">
-                            <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier})).replace(/'/g, "%27")}')), 'pos')" title="Cetak Resi">
+                            <button class="btn btn-sm btn-outline" style="padding:4px 8px" onclick="ReceiptGenerator.showPreview(JSON.parse(decodeURIComponent('${encodeURIComponent(JSON.stringify({ items: t.items || [], receiptNumber: t.id, customerName: t.customer, total: t.total, paymentMethod: t.payment, cashier: t.cashier })).replace(/'/g, "%27")}')), 'pos')" title="Cetak Resi">
                               <i class="fas fa-print"></i>
                             </button>
                             <button class="btn btn-sm btn-outline" style="padding:4px 8px; color:#ef4444; border-color:#ef4444" onclick="deleteTransactionUI('${t.id}')" title="Hapus Transaksi">
@@ -5525,71 +5549,71 @@ Terima kasih dan selamat berlatih!`;
                   </thead>
                   <tbody>
                      ${list.map(t => {
-                      let trainer = '-';
-                      let sessions = '-';
-                      
-                      // Fallback 1: Ambil jumlah sesi dari nama paket (e.g. "Personal Trainer 10 Sesi")
-                      if (t.packageName) {
-                        const pkgMatch = t.packageName.match(/(\d+)\s*Sesi/i);
-                        if (pkgMatch) sessions = pkgMatch[1];
-                      }
+              let trainer = '-';
+              let sessions = '-';
 
-                      // Fallback 2: Ambil dari notes (jika ada data yang tersimpan)
-                      if (t.notes) {
-                        const trainerMatch = t.notes.match(/Trainer:\s*([^.]+)/);
-                        const sessionsMatch = t.notes.match(/Sesi:\s*(\d+)/);
-                        if (trainerMatch && trainerMatch[1]) trainer = trainerMatch[1].trim();
-                        if (sessionsMatch && sessionsMatch[1]) sessions = sessionsMatch[1].trim();
-                      }
+              // Fallback 1: Ambil jumlah sesi dari nama paket (e.g. "Personal Trainer 10 Sesi")
+              if (t.packageName) {
+                const pkgMatch = t.packageName.match(/(\d+)\s*Sesi/i);
+                if (pkgMatch) sessions = pkgMatch[1];
+              }
 
-                      // Bersihkan jika ada string literal "undefined" dari data lama
-                      if (trainer === 'undefined' || !trainer) trainer = '-';
-                      if (sessions === 'undefined' || !sessions) sessions = '-';
+              // Fallback 2: Ambil dari notes (jika ada data yang tersimpan)
+              if (t.notes) {
+                const trainerMatch = t.notes.match(/Trainer:\s*([^.]+)/);
+                const sessionsMatch = t.notes.match(/Sesi:\s*(\d+)/);
+                if (trainerMatch && trainerMatch[1]) trainer = trainerMatch[1].trim();
+                if (sessionsMatch && sessionsMatch[1]) sessions = sessionsMatch[1].trim();
+              }
 
-                      const rData = {
-                        receiptNumber: t.receiptNumber,
-                        memberName: t.memberName,
-                        packageName: t.packageName,
-                        totalAmount: t.totalAmount,
-                        paymentMethod: t.paymentMethod,
-                        qr: t.qrUrl || '',
-                        expiry: t.expiry || '-',
-                        trainer: trainer,
-                        sessions: sessions
-                      };
-                      const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
-                      
-                      const waData = {
-                        memberId: t.memberId,
-                        name: t.memberName,
-                        package: t.packageName,
-                        price: t.totalAmount,
-                        total: t.totalAmount,
-                        payment: t.paymentMethod,
-                        receipt: t.receiptNumber,
-                        qr: t.qrUrl || '',
-                        expiry: t.expiry || '-',
-                        trainer: trainer,
-                        sessions: sessions
-                      };
-                      
-                      // Using hardcoded link format for JS evaluation safety
-                      let waUrl = '';
-                      if (t.phone) {
-                        let phoneNum = t.phone.toString().replace(/[^0-9]/g, '');
-                        if (phoneNum.startsWith('0')) phoneNum = '62' + phoneNum.substring(1);
-                        else if (!phoneNum.startsWith('62')) phoneNum = '62' + phoneNum;
-                        
-                        let typeKey = 'extension';
-                        if (typeFilter === 'Registration') typeKey = 'registration';
-                        else if (typeFilter === 'PT') typeKey = 'pt';
-                        else if (typeFilter === 'Visit') typeKey = 'visit';
-                        
-                        let waText = generateReceiptText(typeKey, waData);
-                        waUrl = 'whatsapp://send?phone=' + phoneNum + '&text=' + encodeURIComponent(waText);
-                      }
-                      
-                      return `
+              // Bersihkan jika ada string literal "undefined" dari data lama
+              if (trainer === 'undefined' || !trainer) trainer = '-';
+              if (sessions === 'undefined' || !sessions) sessions = '-';
+
+              const rData = {
+                receiptNumber: t.receiptNumber,
+                memberName: t.memberName,
+                packageName: t.packageName,
+                totalAmount: t.totalAmount,
+                paymentMethod: t.paymentMethod,
+                qr: t.qrUrl || '',
+                expiry: t.expiry || '-',
+                trainer: trainer,
+                sessions: sessions
+              };
+              const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
+
+              const waData = {
+                memberId: t.memberId,
+                name: t.memberName,
+                package: t.packageName,
+                price: t.totalAmount,
+                total: t.totalAmount,
+                payment: t.paymentMethod,
+                receipt: t.receiptNumber,
+                qr: t.qrUrl || '',
+                expiry: t.expiry || '-',
+                trainer: trainer,
+                sessions: sessions
+              };
+
+              // Using hardcoded link format for JS evaluation safety
+              let waUrl = '';
+              if (t.phone) {
+                let phoneNum = t.phone.toString().replace(/[^0-9]/g, '');
+                if (phoneNum.startsWith('0')) phoneNum = '62' + phoneNum.substring(1);
+                else if (!phoneNum.startsWith('62')) phoneNum = '62' + phoneNum;
+
+                let typeKey = 'extension';
+                if (typeFilter === 'Registration') typeKey = 'registration';
+                else if (typeFilter === 'PT') typeKey = 'pt';
+                else if (typeFilter === 'Visit') typeKey = 'visit';
+
+                let waText = generateReceiptText(typeKey, waData);
+                waUrl = 'whatsapp://send?phone=' + phoneNum + '&text=' + encodeURIComponent(waText);
+              }
+
+              return `
                       <tr>
                         <td><code>${t.receiptNumber}</code></td>
                         <td>${t.transactionDate}</td>
@@ -5619,11 +5643,11 @@ Terima kasih dan selamat berlatih!`;
               </div>
             `;
           } else {
-             el.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444">Gagal memuat: ' + (res?.message || 'Unknown error') + '</div>';
+            el.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444">Gagal memuat: ' + (res?.message || 'Unknown error') + '</div>';
           }
         })
         .withFailureHandler(function (err) {
-           el.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444">Error: ' + err.message + '</div>';
+          el.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444">Error: ' + err.message + '</div>';
         })
         .getRecentTransactionsByType(typeFilter);
     }
@@ -5891,7 +5915,7 @@ Terima kasih dan selamat berlatih!`;
           renderPOSProducts();    // Re-render product grid
           return updated;
         });
-        
+
         // Refresh Dashboard Cache
         LocalCache.update('dashboard_stats', (s) => {
           if (!s) return s;
@@ -5903,7 +5927,7 @@ Terima kasih dan selamat berlatih!`;
 
         // Add to Sync Queue
         SyncQueue.add('processPOSTransaction', [payload]);
-        
+
         hideLoading();
         showToast('Transaksi Berhasil', 'success');
         resetPOS();
@@ -6156,7 +6180,7 @@ Terima kasih dan selamat berlatih!`;
         status: item.status || 'Aktif',
         isSyncing: false
       }));
-      
+
       // MERGE PENDING CHECKINS (OPTIMISTIC)
       const queue = SyncQueue.get();
       const pending = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT');
@@ -6445,12 +6469,12 @@ Terima kasih dan selamat berlatih!`;
                         <td><b>${escapeHtml(h['Nama Produk'])}</b><br><small>${h['ID Produk']}</small></td>
                         <td>
                           ${(() => {
-                            let badgeClass = 'secondary';
-                            if (h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru') badgeClass = 'info';
-                            else if (h['Tipe'] === 'Penjualan') badgeClass = 'danger';
-                            else if (h['Tipe'] === 'Penyesuaian') badgeClass = 'warning';
-                            return `<span class="badge badge-${badgeClass}">${h['Tipe']}</span>`;
-                          })()}
+                let badgeClass = 'secondary';
+                if (h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru') badgeClass = 'info';
+                else if (h['Tipe'] === 'Penjualan') badgeClass = 'danger';
+                else if (h['Tipe'] === 'Penyesuaian') badgeClass = 'warning';
+                return `<span class="badge badge-${badgeClass}">${h['Tipe']}</span>`;
+              })()}
                         </td>
                         <td>${(h['Tipe'] === 'Stok' || h['Tipe'] === 'Stok Baru' || h['Tipe'] === 'Penjualan' || h['Tipe'] === 'Penyesuaian') ? h['Stok Awal'] : formatCurrency(h['Harga Awal'])}</td>
                         <td>
@@ -6597,14 +6621,14 @@ Terima kasih dan selamat berlatih!`;
 
       // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
       LocalCache.update('pos_products', (prods) => {
-         const list = Array.isArray(prods) ? prods : [];
-         const idx = list.findIndex(p => p.id === payload.productId);
-         if (idx !== -1) {
-            list[idx].stock = (parseInt(list[idx].stock) || 0) + payload.addedQty;
-         }
-         posProducts = list;
-         _renderProductTable(list);
-         return list;
+        const list = Array.isArray(prods) ? prods : [];
+        const idx = list.findIndex(p => p.id === payload.productId);
+        if (idx !== -1) {
+          list[idx].stock = (parseInt(list[idx].stock) || 0) + payload.addedQty;
+        }
+        posProducts = list;
+        _renderProductTable(list);
+        return list;
       });
 
       // 2. QUEUE SYNC BACKGROUND
@@ -6617,7 +6641,7 @@ Terima kasih dan selamat berlatih!`;
     function confirmDeletePackage(id, name) {
       showConfirm(`Hapus paket "${name}"?`, function (ok) {
         if (!ok) return;
-        
+
         // 1. QUEUE SYNC BACKGROUND
         SyncQueue.add('deletePackage', [id, currentUser ? currentUser.name : 'Admin']);
 
@@ -6630,14 +6654,14 @@ Terima kasih dan selamat berlatih!`;
     function confirmDeleteProduct(id, name) {
       showConfirm(`Hapus produk "${name}"?`, function (ok) {
         if (!ok) return;
-        
+
         // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
         LocalCache.update('pos_products', (prods) => {
-           const list = Array.isArray(prods) ? prods : [];
-           const filtered = list.filter(p => p.id !== id);
-           posProducts = filtered;
-           _renderProductTable(filtered);
-           return filtered;
+          const list = Array.isArray(prods) ? prods : [];
+          const filtered = list.filter(p => p.id !== id);
+          posProducts = filtered;
+          _renderProductTable(filtered);
+          return filtered;
         });
 
         // 2. QUEUE
@@ -6668,14 +6692,14 @@ Terima kasih dan selamat berlatih!`;
 
       // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
       LocalCache.update('pos_products', (prods) => {
-         const list = Array.isArray(prods) ? prods : [];
-         const idx = list.findIndex(p => p.id === payload.productId);
-         if (idx !== -1) {
-            list[idx].stock = payload.newStock;
-         }
-         posProducts = list;
-         _renderProductTable(list);
-         return list;
+        const list = Array.isArray(prods) ? prods : [];
+        const idx = list.findIndex(p => p.id === payload.productId);
+        if (idx !== -1) {
+          list[idx].stock = payload.newStock;
+        }
+        posProducts = list;
+        _renderProductTable(list);
+        return list;
       });
 
       // 2. QUEUE SYNC BACKGROUND
@@ -6727,7 +6751,7 @@ Terima kasih dan selamat berlatih!`;
               document.getElementById('pkg_promo').value = p['Promo'] || 0;
               document.getElementById('pkg_desc').value = p['Deskripsi'];
               document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE';
-              
+
               if (document.getElementById('pkg_sessions')) {
                 document.getElementById('pkg_sessions').value = p['Jumlah Sesi'] !== undefined ? p['Jumlah Sesi'] : '';
               }
@@ -6750,7 +6774,7 @@ Terima kasih dan selamat berlatih!`;
         document.getElementById('pkg_promo').value = 0;
         document.getElementById('pkg_desc').value = '';
         document.getElementById('pkg_active').checked = true;
-        
+
         if (document.getElementById('pkg_sessions')) {
           document.getElementById('pkg_sessions').value = '';
         }
@@ -6796,7 +6820,7 @@ Terima kasih dan selamat berlatih!`;
       showToast('Paket dimasukkan ke antrean', 'success');
       closePackageModal();
       // Update UI lokal sederhana (opsional: bisa lebih detail)
-      setTimeout(loadPackageList, 500); 
+      setTimeout(loadPackageList, 500);
     }
 
     let productModalScanner = null;
@@ -6943,16 +6967,16 @@ Terima kasih dan selamat berlatih!`;
       // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
       const isNew = !data['ID Produk'];
       LocalCache.update('pos_products', (prods) => {
-         const list = Array.isArray(prods) ? prods : [];
-         if (isNew) {
-            list.push({ id: 'TEMP_' + Date.now(), name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] });
-         } else {
-            const idx = list.findIndex(p => p.id === data['ID Produk']);
-            if (idx !== -1) list[idx] = { ...list[idx], name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] };
-         }
-         posProducts = list;
-         _renderProductTable(list);
-         return list;
+        const list = Array.isArray(prods) ? prods : [];
+        if (isNew) {
+          list.push({ id: 'TEMP_' + Date.now(), name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] });
+        } else {
+          const idx = list.findIndex(p => p.id === data['ID Produk']);
+          if (idx !== -1) list[idx] = { ...list[idx], name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] };
+        }
+        posProducts = list;
+        _renderProductTable(list);
+        return list;
       });
 
       // 2. QUEUE SYNC BACKGROUND
@@ -7193,12 +7217,12 @@ Terima kasih dan selamat berlatih!`;
           if (!el) return;
 
           let list = (res && res.success && res.checkins) ? res.checkins : [];
-          
+
           // AMBIL DATA PENDING DARI QUEUE AGAR TABEL TETAP TERUPDATE (OPTIMISTIC)
           const queue = SyncQueue.get();
           const pending = queue.filter(q => q.action === 'processCheckIn' || q.action === 'processVisitCheckIn' || q.action === 'processCheckInWithPT');
           const allMembers = LocalCache.get('all_members') || [];
-          
+
           // Buat Map untuk cek cepat data server (ID_Waktu)
           const serverSet = new Set(list.map(c => {
             const timeKey = c.checkInTime ? new Date(c.checkInTime).getTime() : 0;
@@ -7206,14 +7230,14 @@ Terima kasih dan selamat berlatih!`;
           }));
 
           const combined = [];
-          
+
           // Tambahkan item pending (Hanya jika belum ada di server)
           pending.forEach(p => {
             const data = p.args[0] || {};
             const isVisit = p.action === 'processVisitCheckIn';
             const mid = (data.memberId || '').toUpperCase();
             const timeKey = p.timestamp || 0;
-            
+
             // Cek apakah item ini sudah ada di list server (berdasarkan ID dan selisih waktu tipis < 5 detik)
             let alreadySynced = false;
             list.forEach(sc => {
@@ -7243,7 +7267,7 @@ Terima kasih dan selamat berlatih!`;
               });
             }
           });
-          
+
           // Tambahkan data dari server
           list.forEach(c => combined.push(c));
 
@@ -7266,8 +7290,8 @@ Terima kasih dan selamat berlatih!`;
                   </thead>
                   <tbody>
                     ${combined.map((c, i) => {
-                      const typeClass = c.type === 'Visit' ? 'primary' : 'success';
-                      return `
+              const typeClass = c.type === 'Visit' ? 'primary' : 'success';
+              return `
                         <tr>
                           <td>${i + 1}</td>
                           <td><b>${escapeHtml(c.memberName || '-')}</b></td>
@@ -7287,7 +7311,7 @@ Terima kasih dan selamat berlatih!`;
                           ` : ''}
                         </tr>
                       `;
-                    }).join('')}
+            }).join('')}
                   </tbody>
                 </table>
               </div>
@@ -7347,7 +7371,7 @@ Terima kasih dan selamat berlatih!`;
               const mid = res.member.id || res.member.memberId;
               const idx = list.findIndex(m => (m.memberId || m.id) === mid);
               const memberData = { ...res.member, memberId: mid, fullName: res.member.name || res.member.fullName };
-              
+
               if (idx !== -1) {
                 list[idx] = { ...list[idx], ...memberData };
               } else {
@@ -7453,12 +7477,12 @@ Terima kasih dan selamat berlatih!`;
 
       const btn = document.getElementById('btnCheckin');
       const originalText = btn.innerHTML;
-      
+
       // 1. TAMPILKAN FEEDBACK INSTAN (OPTIMISTIC)
       try {
         const allMembers = LocalCache.get('all_members') || [];
         const localM = allMembers.find(m => (m.memberId || m.id) === mid);
-        
+
         if (localM) {
           showCheckinSuccess({
             success: true,
@@ -7470,14 +7494,14 @@ Terima kasih dan selamat berlatih!`;
             daysLeft: localM.daysLeft,
             checkinTime: new Date().toISOString()
           }, mid);
-          
+
           // RESET UI IMMEDIATELY
           document.getElementById('ci_memberId').value = '';
           document.getElementById('checkinPreviewArea').innerHTML = '';
-          
+
           // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
           SyncQueue.add('processCheckIn', [{ memberId: mid }, currentUser?.name || 'Admin']);
-          loadTodayCheckins(); 
+          loadTodayCheckins();
           return;
         }
       } catch (e) {
@@ -7522,23 +7546,23 @@ Terima kasih dan selamat berlatih!`;
       const usePT = document.getElementById('ci_usePT')?.checked || false;
       const btn = forcedMid ? document.getElementById('btnConfirmCheckin') : document.getElementById('btnCheckin');
       const originalText = btn.innerHTML;
-      
+
       // 1. TAMPILKAN FEEDBACK INSTAN (OPTIMISTIC)
       try {
         const allMembers = LocalCache.get('all_members') || [];
         const localM = allMembers.find(m => (m.memberId || m.id) === mid);
-        
+
         if (localM) {
           // Kurangi sesi PT di cache lokal secara instan
           if (usePT) {
-             LocalCache.update('all_members', (members) => {
-                return members.map(m => {
-                   if ((m.memberId || m.id) === mid) {
-                      return { ...m, ptSessionsLeft: Math.max(0, (m.ptSessionsLeft || 0) - 1) };
-                   }
-                   return m;
-                });
-             });
+            LocalCache.update('all_members', (members) => {
+              return members.map(m => {
+                if ((m.memberId || m.id) === mid) {
+                  return { ...m, ptSessionsLeft: Math.max(0, (m.ptSessionsLeft || 0) - 1) };
+                }
+                return m;
+              });
+            });
           }
 
           showCheckinSuccess({
@@ -7553,18 +7577,18 @@ Terima kasih dan selamat berlatih!`;
             ptUsed: usePT,
             remainingPTSessions: usePT ? Math.max(0, (localM.ptSessionsLeft || 0) - 1) : (localM.ptSessionsLeft || 0)
           }, mid);
-          
+
           // RESET UI IMMEDIATELY
           document.getElementById('checkinPreviewArea').innerHTML = '';
           if (!forcedMid) document.getElementById('ci_memberId').value = '';
 
           // 2. MASUKKAN KE QUEUE UNTUK SYNC DI LATAR BELAKANG
-          SyncQueue.add('processCheckInWithPT', [{ 
+          SyncQueue.add('processCheckInWithPT', [{
             requestId: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-            memberId: mid, 
-            usePT: usePT 
+            memberId: mid,
+            usePT: usePT
           }, currentUser?.name || 'Admin']);
-          loadTodayCheckins(); 
+          loadTodayCheckins();
           return;
         }
       } catch (e) {
@@ -7644,11 +7668,11 @@ Terima kasih dan selamat berlatih!`;
         </div>
       `;
       document.getElementById('ci_memberId').value = '';
-      
+
       setTimeout(() => {
         const currentRes = document.getElementById('checkinResult');
         if (currentRes && currentRes.innerHTML.includes('Berhasil')) {
-           currentRes.innerHTML = '';
+          currentRes.innerHTML = '';
         }
       }, 10000);
     }
@@ -8344,7 +8368,7 @@ Terima kasih dan selamat berlatih!`;
 
           hideLoading();
           showToast('Registrasi PT dimasukkan ke antrean', 'success');
-          
+
           // Reset Form
           ptSelectedMember = null;
           if (document.getElementById('pt_memberId')) document.getElementById('pt_memberId').value = '';
@@ -8355,10 +8379,10 @@ Terima kasih dan selamat berlatih!`;
           if (document.getElementById('pt_sessions')) document.getElementById('pt_sessions').value = '10';
           if (document.getElementById('pt_price')) document.getElementById('pt_price').value = '150000';
           if (document.getElementById('pt_payment')) document.getElementById('pt_payment').selectedIndex = 0;
-          
+
           updatePTSummary();
           loadActivePTSessions();
-          
+
           // Tampilkan pesan sukses sementara (Optimistic)
           const resultEl = document.getElementById('ptResult');
           if (resultEl) {
@@ -8545,7 +8569,7 @@ Terima kasih dan selamat berlatih!`;
 
       el.innerHTML = `
         <div style="display:grid;gap:16px">
-          ${list.map(a => {
+          ${list.map((a, index) => {
         const data = a.data || {};
         return `
               <div class="form-card" style="margin:0">
@@ -8598,7 +8622,7 @@ Terima kasih dan selamat berlatih!`;
                   
                   <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap">
                     ${data.phone ? `
-                      <button class="btn btn-sm" style="background:#25D366; color:white; padding:4px 8px; display:inline-flex; align-items:center; gap:6px; font-weight:600" onclick="shareApprovalWA('${escapeHtml(a.approvalId)}')" title="Kirim WA">
+                      <button class="btn btn-sm" style="background:#25D366; color:white; padding:4px 8px; display:inline-flex; align-items:center; gap:6px; font-weight:600" onclick="shareApprovalWA(${index})" title="Kirim WA">
                         <i class="fab fa-whatsapp"></i> Kirim WA
                       </button>
                     ` : ''}
@@ -8641,17 +8665,17 @@ Terima kasih dan selamat berlatih!`;
         `Lanjutkan?`,
         function (ok) {
           if (!ok) return;
-          
+
           showLoading('Menyetujui pembayaran...');
           google.script.run
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res && res.success) {
                 showToast(res.message, 'success');
-                
+
                 const approval = currentApprovals.find(a => a.approvalId === id);
                 loadApprovals();
-                
+
                 if (approval) {
                   const data = approval.data || {};
                   const receiptNumber = res.receiptNumber || '-';
@@ -8667,9 +8691,9 @@ Terima kasih dan selamat berlatih!`;
                     `⏳ *Langkah Selanjutnya:*\n` +
                     `Akun Anda sedang dalam proses *Aktivasi* oleh Admin. Anda akan menerima pemberitahuan berikutnya beserta Kode QR setelah masa berlaku diaktifkan.\n\n` +
                     `Terima kasih telah bergabung dengan UGYM! 💪`;
-                  
+
                   setTimeout(() => {
-                    showConfirm('Pembayaran berhasil disetujui! Apakah Anda ingin mengirim pesan konfirmasi WhatsApp ke member?', function(waOk) {
+                    showConfirm('Pembayaran berhasil disetujui! Apakah Anda ingin mengirim pesan konfirmasi WhatsApp ke member?', function (waOk) {
                       if (waOk) {
                         shareToWhatsApp(data.phone, waText);
                       }
@@ -8737,13 +8761,18 @@ Terima kasih dan selamat berlatih!`;
       });
     }
 
-    function shareApprovalWA(approvalId) {
-      const approval = currentApprovals.find(a => a.approvalId === approvalId);
+    function shareApprovalWA(identifier) {
+      let approval;
+      if (typeof identifier === 'number') {
+        approval = currentApprovals[identifier];
+      } else {
+        approval = currentApprovals.find(a => String(a.approvalId) === String(identifier));
+      }
       if (!approval) {
         showToast('Data approval tidak ditemukan', 'warning');
         return;
       }
-      
+
       const data = approval.data || {};
       const phone = data.phone;
       if (!phone) {
@@ -8755,11 +8784,11 @@ Terima kasih dan selamat berlatih!`;
       const notes = approval.notes || '';
       const receiptMatch = notes.match(/Receipt:\s*([^\s\n\r]+)/i);
       const receiptNumber = receiptMatch ? receiptMatch[1] : 'PENDING';
-      
+
       let type = 'extension';
       if (approval.type === 'Registration') type = 'registration';
       else if (approval.type === 'PT' || (data.package && data.package.toLowerCase().includes('pt'))) type = 'pt';
-      
+
       // Jika statusnya masih 'Pending' (belum di-approve bayar), buat pesan konfirmasi
       if (approval.status === 'Pending') {
         const text = `*KONFIRMASI PENDAFTARAN - UGYM*\n` +
@@ -8795,7 +8824,7 @@ Terima kasih dan selamat berlatih!`;
       let waText = generateReceiptText(type, receiptData);
       // Hilangkan rincian masa berlaku (Berlaku s/d) karena belum diaktivasi
       waText = waText.replace(/Berlaku s\/d:\s*[^\n\r]*\n?/gi, '');
-      
+
       shareToWhatsApp(phone, waText);
     }
 
@@ -9033,7 +9062,7 @@ Terima kasih dan selamat berlatih!`;
           // MERGE PENDING REGISTRATIONS (OPTIMISTIC)
           const queue = SyncQueue.get();
           const pending = queue.filter(q => q.action === 'registerMember');
-          
+
           pending.forEach(p => {
             const data = p.args[0] || {};
             list.unshift({
@@ -9326,7 +9355,7 @@ Terima kasih dan selamat berlatih!`;
           hideLoading();
           showToast('Error: ' + err.message, 'error');
         })
-        [fn]();
+      [fn]();
     }
 
     function loadUserList() {
@@ -9548,11 +9577,11 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           if (res && res.success) {
             let list = res.expenses || [];
-            
+
             // MERGE PENDING EXPENSES (OPTIMISTIC)
             const queue = SyncQueue.get();
             const pending = queue.filter(q => q.action === 'addExpense');
-            
+
             pending.forEach(p => {
               const data = p.args[0] || {};
               list.unshift({
@@ -9564,7 +9593,7 @@ Terima kasih dan selamat berlatih!`;
                 isSyncing: false
               });
             });
-            
+
             renderExpensesTable(list);
           } else {
             showToast('Gagal memuat data: ' + (res.message || 'Error Unknown'), 'error');
@@ -9805,7 +9834,7 @@ Terima kasih dan selamat berlatih!`;
 
       if (type === 'deleted_transactions') {
         google.script.run
-          .withSuccessHandler(function(res) {
+          .withSuccessHandler(function (res) {
             if (res && res.success) {
               if (!res.data || res.data.length === 0) {
                 container.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8">Tidak ada data riwayat penghapusan.</div>';
@@ -9854,11 +9883,11 @@ Terima kasih dan selamat berlatih!`;
 
               if (res.isProductSummary) {
                 const isStaffOrKasir = currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir');
-                
+
                 let totalQty = 0;
                 let totalOmset = 0;
                 let totalNetProfit = 0;
-                
+
                 res.data.forEach(item => {
                   totalQty += Number(item.qty) || 0;
                   totalOmset += Number(item.omset) || 0;
@@ -10426,9 +10455,9 @@ Terima kasih dan selamat berlatih!`;
       const modal = document.getElementById('dailyReportModal');
       const content = document.getElementById('dailyReportContent');
       modal.style.display = 'flex';
-      
+
       const today = new Date().toISOString().split('T')[0];
-      
+
       content.innerHTML = `
         <div style="background:#f8fafc;padding:16px;border-radius:12px;margin-bottom:20px;border:1px solid #e2e8f0">
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));gap:12px;align-items:flex-end">
@@ -10464,9 +10493,9 @@ Terima kasih dan selamat berlatih!`;
       const start = document.getElementById('report_start')?.value;
       const end = document.getElementById('report_end')?.value;
       const loadArea = document.getElementById('reportLoadArea');
-      
+
       if (loadArea) loadArea.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><p style="margin-top:10px">Mengambil data laporan...</p></div>';
-      
+
       google.script.run
         .withSuccessHandler(function (res) {
           if (res.success) {
@@ -10815,11 +10844,11 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           if (res.success) {
             let list = res.history || [];
-            
+
             // MERGE PENDING POS TRANSACTIONS (OPTIMISTIC)
             const queue = SyncQueue.get();
             const pending = queue.filter(q => q.action === 'processPOSTransaction');
-            
+
             pending.forEach(p => {
               const data = p.args[0] || {};
               list.unshift({
@@ -10885,10 +10914,10 @@ Terima kasih dan selamat berlatih!`;
         showToast('Alasan penghapusan wajib diisi!', 'warning');
         return;
       }
-      
+
       showConfirm('PERHATIAN: Anda yakin ingin menghapus transaksi ini? Data terkait seperti stok atau check-in akan ikut disesuaikan. Data yang dihapus akan masuk ke riwayat penghapusan.', function (ok) {
         if (!ok) return;
-        
+
         showLoading('Menghapus transaksi...');
         google.script.run
           .withSuccessHandler(function (res) {
@@ -10929,7 +10958,7 @@ Terima kasih dan selamat berlatih!`;
       }
       showConfirm('Anda yakin ingin menghapus data check-in ini? Jika ini adalah check-in PT, sesi PT member akan dikembalikan.', function (ok) {
         if (!ok) return;
-        
+
         showLoading('Menghapus check-in...');
         google.script.run
           .withSuccessHandler(function (res) {
@@ -10956,7 +10985,7 @@ Terima kasih dan selamat berlatih!`;
       }
       showConfirm('Anda yakin ingin menghapus riwayat pembaruan stok ini? Stok produk terkait akan dikembalikan ke nilai sebelum pembaruan.', function (ok) {
         if (!ok) return;
-        
+
         showLoading('Menghapus riwayat stok...');
         google.script.run
           .withSuccessHandler(function (res) {
@@ -11213,9 +11242,9 @@ Terima kasih dan selamat berlatih!`;
     function refreshFollowup() {
       const expiringContainer = document.getElementById('expiringListContainer');
       const expiredContainer = document.getElementById('expiredListContainer');
-      
+
       if (!expiringContainer || !expiredContainer) return;
-      
+
       expiringContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
       expiredContainer.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>';
 
@@ -11230,7 +11259,7 @@ Terima kasih dan selamat berlatih!`;
           // Set templates
           currentExpiringTemplate = res.expiringTemplate;
           currentExpiredTemplate = res.expiredTemplate;
-          
+
           if (document.getElementById('expiringTemplateInput')) {
             document.getElementById('expiringTemplateInput').value = res.expiringTemplate;
             document.getElementById('expiredTemplateInput').value = res.expiredTemplate;
