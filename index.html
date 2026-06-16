@@ -8633,18 +8633,18 @@ Terima kasih dan selamat berlatih!`;
                         </span>
                         <small style="color:#64748b; font-size:10px">Uang sudah masuk laporan. Menunggu member tentukan tanggal mulai aktif.</small>
                       </div>
-                      <button class="btn btn-primary btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
+                      <button class="btn btn-primary btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}', ${index})">
                         <i class="fas fa-bolt"></i> Aktivasi Sekarang
                       </button>
                     ` : `
-                      <button class="btn btn-info btn-sm" onclick="approvePayment('${escapeHtml(a.approvalId)}')">
+                      <button class="btn btn-info btn-sm" onclick="approvePayment('${escapeHtml(a.approvalId)}', ${index})">
                         <i class="fas fa-credit-card"></i> 1. Approve Bayar
                       </button>
-                      <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}')">
+                      <button class="btn btn-success btn-sm" onclick="approveActivation('${escapeHtml(a.approvalId)}', ${index})">
                         <i class="fas fa-check-double"></i> 2. Aktivasi (Jika tgl sdh tahu)
                       </button>
                     `}
-                    <button class="btn btn-danger btn-sm" onclick="rejectRequest('${escapeHtml(a.approvalId)}')">
+                    <button class="btn btn-danger btn-sm" onclick="rejectRequest('${escapeHtml(a.approvalId)}', ${index})">
                       <i class="fas fa-times"></i> Reject
                     </button>
                   </div>
@@ -8656,7 +8656,7 @@ Terima kasih dan selamat berlatih!`;
       `;
     }
 
-    function approvePayment(id) {
+    function approvePayment(id, index) {
       const payDate = document.getElementById(`payDate_${id}`)?.value || '';
       showConfirm(
         `APPROVE PEMBAYARAN\n\n` +
@@ -8673,7 +8673,7 @@ Terima kasih dan selamat berlatih!`;
               if (res && res.success) {
                 showToast(res.message, 'success');
 
-                const approval = currentApprovals.find(a => a.approvalId === id);
+                const approval = typeof index === 'number' ? currentApprovals[index] : currentApprovals.find(a => String(a.approvalId) === String(id));
                 loadApprovals();
 
                 if (approval) {
@@ -8713,7 +8713,7 @@ Terima kasih dan selamat berlatih!`;
       );
     }
 
-    function approveActivation(id) {
+    function approveActivation(id, index) {
       const startDate = document.getElementById(`startDate_${id}`)?.value || '';
       showConfirm(
         `APPROVE AKTIVASI MEMBER\n\n` +
@@ -8743,7 +8743,7 @@ Terima kasih dan selamat berlatih!`;
       );
     }
 
-    function rejectRequest(id) {
+    function rejectRequest(id, index) {
       const reason = prompt('Alasan penolakan (wajib):');
       if (reason === null) return;
       if (!reason.trim()) {
