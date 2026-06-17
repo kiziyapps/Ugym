@@ -3435,7 +3435,7 @@ Terima kasih dan selamat berlatih!`;
             <label class="form-label" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #8e8e93; margin-bottom: 8px;">
               <i class="fas fa-shield-alt"></i> Security Key
             </label>
-            <input id="loginPass" type="password" class="form-input" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" 
+            <input id="loginPass" type="password" class="form-input" placeholder="••••••••" 
                    autocomplete="current-password" onkeypress="if(event.key==='Enter') doLogin()" 
                    style="text-align: center; background: #f2f2f7; border: none; border-radius: 16px; padding: 16px;">
           </div>
@@ -4874,7 +4874,7 @@ Terima kasih dan selamat berlatih!`;
                         <div>
                           <div class="header">
                             <div class="gym-name">UGYM</div>
-                            <div class="tagline">Power â€¢ Fitness â€¢ Health</div>
+                            <div class="tagline">Power • Fitness • Health</div>
                           </div>
                           <div class="member-info">
                             <div class="member-name">${m.name}</div>
@@ -5953,7 +5953,7 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           hideLoading();
           if (res.success) {
-            let itemsText = data.items.map(it => `â€¢ ${it.name} x${it.qty}`).join('\n');
+            let itemsText = data.items.map(it => `• ${it.name} x${it.qty}`).join('\n');
             let text = `*STRUK PENJUALAN - UGYM*\n` +
               `--------------------------------\n` +
               `ID Trx: ${trxId}\n` +
@@ -8687,9 +8687,9 @@ Terima kasih dan selamat berlatih!`;
                     `Halo *${approval.memberName || 'Member'}*,\n\n` +
                     `Pembayaran Anda telah kami terima dan diverifikasi.\n\n` +
                     `*Rincian Pembayaran:*\n` +
-                    `â€¢ No. Kwitansi: ${receiptNumber}\n` +
-                    `â€¢ Paket: ${data.package || '-'}\n` +
-                    `â€¢ Total: ${formatCurrency(data.amount || 0)}\n\n` +
+                    `• No. Kwitansi: ${receiptNumber}\n` +
+                    `• Paket: ${data.package || '-'}\n` +
+                    `• Total: ${formatCurrency(data.amount || 0)}\n\n` +
                     `--------------------------------\n` +
                     `â³ *Langkah Selanjutnya:*\n` +
                     `Akun Anda sedang dalam proses *Aktivasi* oleh Admin. Anda akan menerima pemberitahuan berikutnya beserta Kode QR setelah masa berlaku diaktifkan.\n\n` +
@@ -8799,9 +8799,9 @@ Terima kasih dan selamat berlatih!`;
           `Halo *${approval.memberName || 'Member'}*,\n\n` +
           `Kami menerima pengajuan ${approval.type === 'Registration' ? 'pendaftaran' : 'perpanjangan'} Anda.\n\n` +
           `*Detail Pengajuan:*\n` +
-          `â€¢ Paket: ${data.package || '-'}\n` +
-          `â€¢ Total Pembayaran: ${formatCurrency(data.amount || 0)}\n` +
-          `â€¢ Status: Menunggu Verifikasi Pembayaran\n\n` +
+          `• Paket: ${data.package || '-'}\n` +
+          `• Total Pembayaran: ${formatCurrency(data.amount || 0)}\n` +
+          `• Status: Menunggu Verifikasi Pembayaran\n\n` +
           `Jika Anda sudah melakukan transfer, mohon kirimkan kembali bukti transfer yang valid agar dapat kami verifikasi segera.\n\n` +
           `Terima kasih! UGYM ðŸ’ª`;
         shareToWhatsApp(phone, text);
@@ -10763,14 +10763,14 @@ Terima kasih dan selamat berlatih!`;
               `--------------------------------\n` +
               `*Ringkasan Keuangan:*\n` +
               `- Total Revenue: ${formatCurrency(summary.totalRevenue)}\n` +
-              `  â€¢ Cash: ${formatCurrency(summary.cashIn || 0)}\n` +
-              `  â€¢ Trf: ${formatCurrency(summary.transferIn || 0)}\n` +
+              `  • Cash: ${formatCurrency(summary.cashIn || 0)}\n` +
+              `  • Trf: ${formatCurrency(summary.transferIn || 0)}\n` +
               `- Total Expenses: ${formatCurrency(summary.totalExpenses)}\n` +
-              `  â€¢ Cash: ${formatCurrency(summary.cashOut || 0)}\n` +
-              `  â€¢ Trf: ${formatCurrency(summary.transferOut || 0)}\n` +
+              `  • Cash: ${formatCurrency(summary.cashOut || 0)}\n` +
+              `  • Trf: ${formatCurrency(summary.transferOut || 0)}\n` +
               `- Kas Kombinasi (Net): ${formatCurrency((summary.totalRevenue || 0) - (summary.totalExpenses || 0))}\n` +
-              `  â€¢ Cash Net: ${formatCurrency(summary.netCash || 0)}\n` +
-              `  â€¢ Trf Net: ${formatCurrency(summary.netTransfer || 0)}\n` +
+              `  • Cash Net: ${formatCurrency(summary.netCash || 0)}\n` +
+              `  • Trf Net: ${formatCurrency(summary.netTransfer || 0)}\n` +
               `--------------------------------\n` +
               `Detail Lengkap (PDF):\n` +
               `${res.url}\n\n` +
@@ -10877,8 +10877,8 @@ Terima kasih dan selamat berlatih!`;
                     <div class="list-item-content">
                       <div class="list-item-title">${escapeHtml(t['Nama Pembeli'] || 'Pelanggan Guest')}</div>
                       <div class="list-item-subtitle">
-                        <span class="badge badge-primary" style="font-size:10px">${t['ID Transaksi']}</span> â€¢ 
-                        ${new Date(t.Waktu).toLocaleString('id-ID', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })} â€¢ 
+                        <span class="badge badge-primary" style="font-size:10px">${t['ID Transaksi']}</span> • 
+                        ${new Date(t.Waktu).toLocaleString('id-ID', { day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' })} • 
                         <i class="fas fa-user-tie"></i> ${t.Kasir}
                       </div>
                     </div>
@@ -11108,7 +11108,7 @@ Terima kasih dan selamat berlatih!`;
                     <span class="badge ${isToday ? 'badge-primary' : 'badge-info'}" style="margin-right:8px">
                       <i class="fas fa-birthday-cake"></i> ${isToday ? 'HARI INI!' : bdayDate}
                     </span>
-                    <i class="fas fa-calendar-alt"></i> Ke-${b.age} â€¢ <i class="fas fa-phone"></i> ${b.phone}
+                    <i class="fas fa-calendar-alt"></i> Ke-${b.age} • <i class="fas fa-phone"></i> ${b.phone}
                   </div>
                 </div>
                 <div class="list-item-action">
