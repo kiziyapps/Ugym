@@ -8258,7 +8258,7 @@ Terima kasih dan selamat berlatih!`;
 
         const canRegisterPT = member.status === 'Aktif';
         const warningMsg = !canRegisterPT ?
-          'âš ï¸ Member tidak aktif, tidak bisa registrasi PT. Perpanjang member terlebih dahulu.' : '';
+          '⚠️ Member tidak aktif, tidak bisa registrasi PT. Perpanjang member terlebih dahulu.' : '';
 
         infoEl.innerHTML = `
           <div style="line-height:1.8">
@@ -8593,14 +8593,14 @@ Terima kasih dan selamat berlatih!`;
                   
                   <div style="background:#f8fafc;border-radius:8px;padding:12px;margin:12px 0">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px">
-                      <div><span class="text-muted">ðŸ“ž Telepon:</span> ${escapeHtml(data.phone || '-')}</div>
-                      <div><span class="text-muted">ðŸ“§ Email:</span> ${escapeHtml(data.email || '-')}</div>
-                      <div><span class="text-muted">ðŸ“¦ Paket:</span> <b>${escapeHtml(data.package || '-')}</b></div>
-                      <div><span class="text-muted">ðŸ’° Total:</span> <b style="color:#22c55e">${formatCurrency(data.amount || 0)}</b></div>
+                      <div><span class="text-muted"><i class="fas fa-phone"></i> Telepon:</span> ${escapeHtml(data.phone || '-')}</div>
+                      <div><span class="text-muted"><i class="fas fa-envelope"></i> Email:</span> ${escapeHtml(data.email || '-')}</div>
+                      <div><span class="text-muted"><i class="fas fa-box"></i> Paket:</span> <b>${escapeHtml(data.package || '-')}</b></div>
+                      <div><span class="text-muted"><i class="fas fa-money-bill-wave"></i> Total:</span> <b style="color:#22c55e">${formatCurrency(data.amount || 0)}</b></div>
                     </div>
                     ${data.paymentMethod ? `
                       <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e1">
-                        <span class="text-muted">ðŸ’³ Metode Pembayaran:</span> <b>${escapeHtml(data.paymentMethod)}</b>
+                        <span class="text-muted"><i class="fas fa-credit-card"></i> Metode Pembayaran:</span> <b>${escapeHtml(data.paymentMethod)}</b>
                       </div>
                     ` : ''}
                   </div>
@@ -8693,9 +8693,9 @@ Terima kasih dan selamat berlatih!`;
                     `• Paket: ${data.package || '-'}\n` +
                     `• Total: ${formatCurrency(data.amount || 0)}\n\n` +
                     `--------------------------------\n` +
-                    `â³ *Langkah Selanjutnya:*\n` +
+                    `⏳ *Langkah Selanjutnya:*\n` +
                     `Akun Anda sedang dalam proses *Aktivasi* oleh Admin. Anda akan menerima pemberitahuan berikutnya beserta Kode QR setelah masa berlaku diaktifkan.\n\n` +
-                    `Terima kasih telah bergabung dengan UGYM! ðŸ’ª`;
+                    `Terima kasih telah bergabung dengan UGYM! 💪`;
 
                   setTimeout(() => {
                     showConfirm('Pembayaran berhasil disetujui! Apakah Anda ingin mengirim pesan konfirmasi WhatsApp ke member?', function (waOk) {
