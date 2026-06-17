@@ -30,7 +30,8 @@
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwRbU5_SWLs15kuq-E9wm4TEoPNX0APOrg4TVv249sH4wAbA7So6a_SIjk1v9hwoXHEhA/exec';
     // ================ IMPROVED PROXY FOR google.script.run ================
-    const google = {
+    if (typeof google === 'undefined' || typeof google.script === 'undefined' || typeof google.script.run === 'undefined') {
+      window.google = {
       script: {
         run: new Proxy({}, {
           get: function (target, methodName) {
@@ -103,7 +104,8 @@
           }
         })
       }
-    };
+      };
+    }
 
     // ================ LOCAL CACHE & SYNC MANAGER ================
     const LocalCache = {
