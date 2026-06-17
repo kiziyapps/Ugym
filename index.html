@@ -9045,10 +9045,17 @@ Terima kasih dan selamat berlatih!`;
 
     function clearCache() {
       showLoading();
+      // Bersihkan cache lokal di browser
+      if (typeof LocalCache !== 'undefined') {
+        LocalCache.clear();
+      }
+      
       google.script.run
         .withSuccessHandler(function (res) {
           hideLoading();
-          showToast(res?.success ? 'Cache berhasil dibersihkan' : 'Gagal', 'success');
+          showToast(res?.success ? 'Cache Server & Lokal berhasil dibersihkan' : 'Gagal', 'success');
+          // Reload halaman agar state benar-benar fresh
+          setTimeout(() => window.location.reload(), 1500);
         })
         .withFailureHandler(function (err) {
           hideLoading();
