@@ -184,7 +184,7 @@
       syncInterval: 5 * 60 * 1000, // 5 menit default
 
       init: function () {
-        console.log('ðŸ”„ SyncManager Initialized');
+        console.log('🔄 SyncManager Initialized');
         this.lastSync = parseInt(localStorage.getItem('ugym_last_sync') || '0');
 
         // Jalankan sync pertama kali setelah login
@@ -210,7 +210,7 @@
         if (this.isSyncing || !currentUser) return;
         if (!force && (Date.now() - this.lastSync < this.syncInterval)) return;
 
-        console.log('ðŸš€ Starting Background Sync...');
+        console.log('🚀 Starting Background Sync...');
         this.updateIndicator('syncing', 'Syncing...');
         this.isSyncing = true;
         const self = this;
@@ -219,7 +219,7 @@
           .withSuccessHandler(function (res) {
             self.isSyncing = false;
             if (res && res.success) {
-              console.log('âœ… Sync Completed:', res.summary);
+              console.log('✅ Sync Completed:', res.summary);
               self.lastSync = Date.now();
               localStorage.setItem('ugym_last_sync', self.lastSync.toString());
 
@@ -264,12 +264,12 @@
       index: '',
       map: [],
       build: function (members) {
-        console.time('âš¡ Building Search Index');
+        console.time('⚡ Building Search Index');
         this.map = members;
         this.index = members.map(m => {
           return `${(m.memberId || m.id || '').toLowerCase()}|${(m.fullName || m.name || '').toLowerCase()}|${(m.phone || '').toLowerCase()}`;
         }).join('\n');
-        console.timeEnd('âš¡ Building Search Index');
+        console.timeEnd('⚡ Building Search Index');
       },
       search: function (query) {
         if (!query || query.length < 2) return [];
@@ -521,7 +521,7 @@
         if (queue.length === 0) return;
 
         this.isProcessing = true;
-        console.log('ðŸ“¦ Processing Offline Queue (' + queue.length + ' items)...');
+        console.log('📦 Processing Offline Queue (' + queue.length + ' items)...');
         if (SyncManager.updateIndicator) SyncManager.updateIndicator('syncing', 'Queue...');
 
         const self = this;
@@ -535,25 +535,47 @@
           }
 
           const item = currentQueue[0]; // Always take the first one
-          google.script.run
-            .withSuccessHandler(res => {
-              // Hapus dari antrean jika server berhasil dijangkau (meskipun ada error logika seperti member tidak ditemukan/sudah checkin)
-              self.remove(item.id);
+          try {
+            google.script.run
+              .withSuccessHandler(res => {
+                // Hapus dari antrean jika server berhasil dijangkau (meskipun ada error logika seperti member tidak ditemukan/sudah checkin)
+                self.remove(item.id);
 
-              if (res && res.success) {
-                console.log('âœ… Queue Item Processed:', item.action);
-              } else {
-                console.warn('âš ï¸ Queue Action Handled with Logic Error:', item.action, res?.message);
-              }
+                if (res && res.success) {
+                  console.log('✅ Queue Item Processed:', item.action);
+                } else {
+                  console.warn('⚠️ Queue Action Handled with Logic Error:', item.action, res?.message);
+                }
 
-              // Lanjut ke antrean berikutnya
-              processNext(0);
-            })
-            .withFailureHandler(err => {
-              console.warn('âŒ Queue Network/System Failure:', item.action, err);
-              self.isProcessing = false; // Stop processing for now, wait for next trigger
-            })
-          [item.action](...item.args);
+                // Lanjut ke antrean berikutnya
+                processNext(0);
+              })
+              .withFailureHandler(err => {
+                console.warn('❌ Queue Network/System Failure:', item.action, err);
+                
+                // Tambahkan retry counter untuk menghindari infinite loop
+                item.retries = (item.retries || 0) + 1;
+                if (item.retries >= 3 || String(err).includes("not found") || String(err).includes("tidak ditemukan")) {
+                  console.error('Dropping poisoned queue item (Max Retries / Not Found):', item.action);
+                  self.remove(item.id);
+                  processNext(0); // Lanjut ke item berikutnya
+                } else {
+                  const q = self.get();
+                  const idx = q.findIndex(x => x.id === item.id);
+                  if (idx !== -1) {
+                    q[idx].retries = item.retries;
+                    localStorage.setItem(self.key, JSON.stringify(q));
+                  }
+                  self.isProcessing = false; // Stop processing for now, wait for next trigger
+                  if (SyncManager.updateIndicator) SyncManager.updateIndicator('offline', 'Error Sync');
+                }
+              })
+            [item.action](...item.args);
+          } catch (clientErr) {
+            console.error('❌ Client Error invoking action:', item.action, clientErr);
+            self.remove(item.id); // Drop poisoned item
+            processNext(0);
+          }
         };
 
         processNext(0);
@@ -2189,7 +2211,7 @@
       }
     }
 
-    /* ===== Tablet (â‰¤1024px) â€” Improved POS & Sidebar ===== */
+    /* ===== Tablet (≤1024px) â€” Improved POS & Sidebar ===== */
     @media (max-width:1024px) {
       .pos-layout {
         grid-template-columns: 1fr 340px;
@@ -2307,7 +2329,7 @@
       }
     }
 
-    /* ===== Small Mobile (â‰¤480px) ===== */
+    /* ===== Small Mobile (≤480px) ===== */
     @media (max-width:480px) {
       .stats-grid {
         grid-template-columns: 1fr !important
@@ -3961,7 +3983,7 @@ Terima kasih dan selamat berlatih!`;
       if (!start && !end) {
         const cached = LocalCache.get('dashboard_stats');
         if (cached && cached.hasOwnProperty('regularCheckinsCount')) {
-          console.log('ðŸ“Š Loaded Dashboard Stats from Cache');
+          console.log('📊 Loaded Dashboard Stats from Cache');
           updateDashboardUI(cached);
           // Still fetch in background
         }
@@ -4620,7 +4642,7 @@ Terima kasih dan selamat berlatih!`;
                       <i class="fas fa-check"></i>
                     </div>
                     <div>
-                      <h3 style="color:#166534;margin:0 0 4px 0">âœ… ${escapeHtml(res.message || 'Registrasi Berhasil')}</h3>
+                      <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Registrasi Berhasil')}</h3>
                       <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
                     </div>
                   </div>
@@ -4682,7 +4704,7 @@ Terima kasih dan selamat berlatih!`;
                   
                   ${res.qrCodeUrl ? `
                     <div style="text-align:center;margin:20px 0 10px 0">
-                      <h4 style="color:#334155;margin:0 0 12px 0">ðŸŽ« QR Code Member</h4>
+                      <h4 style="color:#334155;margin:0 0 12px 0">🎫 QR Code Member</h4>
                       <img src="${escapeHtml(res.qrCodeUrl)}" alt="QR Code" style="width:150px;height:150px;border:2px solid #667eea;border-radius:8px;padding:8px">
                     </div>
                   ` : ''}
@@ -5016,7 +5038,7 @@ Terima kasih dan selamat berlatih!`;
       // 1. Try Local Search first for instant feedback
       const localResults = localSearchMember(q);
       if (localResults) {
-        console.log('âš¡ Local Search Match:', localResults.length);
+        console.log('⚡ Local Search Match:', localResults.length);
         renderMemberSearchResults(localResults, 'memberSearchResults', 'selectMemberForTrx');
         // Still fire server search in background to ensure freshness, but no spinner
       } else {
@@ -5668,7 +5690,7 @@ Terima kasih dan selamat berlatih!`;
         // 2. Check LocalCache
         const cached = LocalCache.get('pos_products');
         if (cached) {
-          console.log('ðŸ“¦ Loaded POS Products from Cache');
+          console.log('📦 Loaded POS Products from Cache');
           posProducts = cached;
           const cats = ['All'];
           posProducts.forEach(p => {
@@ -5732,7 +5754,7 @@ Terima kasih dan selamat berlatih!`;
             <div class="product-info">
               <div class="product-name">${escapeHtml(p.name)}</div>
               <div class="product-price">${formatCurrency(p.price)}</div>
-              <div class="product-stock">Stok: ${p.stock === '' ? 'âˆž' : p.stock} ${p.unit || ''}</div>
+              <div class="product-stock">Stok: ${p.stock === '' ? '∞' : p.stock} ${p.unit || ''}</div>
             </div>
           </div>
         `;
@@ -6005,7 +6027,7 @@ Terima kasih dan selamat berlatih!`;
         const p = posProducts.find(x => x.barcode == text);
         if (p) {
           addToCart(p.id);
-          showToast('âœ… Ditambahkan: ' + p.name, 'success');
+          showToast('✅ Ditambahkan: ' + p.name, 'success');
           new Audio('https://www.soundjay.com/buttons/beep-07.wav').play();
         } else {
           showToast('Barcode tidak terdaftar', 'warning');
@@ -6586,7 +6608,7 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           hideLoading();
           if (res.success) {
-            showToast('âœ… Berhasil diupdate', 'success');
+            showToast('✅ Berhasil diupdate', 'success');
             loadProductList();
           } else {
             showToast('âŒ ' + res.message, 'error');
@@ -7352,7 +7374,7 @@ Terima kasih dan selamat berlatih!`;
       const localM = all.find(m => (m.memberId || '').toUpperCase() === mid.toUpperCase());
 
       if (localM) {
-        console.log('âš¡ Showing Instant Local Preview (Verified by Cache)');
+        console.log('⚡ Showing Instant Local Preview (Verified by Cache)');
         // Render dengan isLocal=false agar tombol aktif seketika
         renderCheckinProfile(localM, false);
       } else {
@@ -7652,7 +7674,7 @@ Terima kasih dan selamat berlatih!`;
           <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
             <div style="background:#22c55e;color:white;width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px"><i class="fas fa-check"></i></div>
             <div>
-              <h3 style="color:#166534;margin:0 0 4px 0">âœ… Berhasil</h3>
+              <h3 style="color:#166534;margin:0 0 4px 0">✅ Berhasil</h3>
               <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
             </div>
           </div>
@@ -7667,7 +7689,7 @@ Terima kasih dan selamat berlatih!`;
           </div>
           ${ptHtml} ${warningHtml}
           <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center">
-            <div><span class="badge badge-${ptUsed ? 'success' : 'info'}">${ptUsed ? 'âœ“ Menggunakan PT' : 'Tidak menggunakan PT'}</span></div>
+            <div><span class="badge badge-${ptUsed ? 'success' : 'info'}">${ptUsed ? '✓ Menggunakan PT' : 'Tidak menggunakan PT'}</span></div>
             <div style="color:#64748b;font-size:12px"><i class="far fa-clock"></i> Check-in: ${formatTime(checkinTime)}</div>
           </div>
         </div>
@@ -7829,7 +7851,7 @@ Terima kasih dan selamat berlatih!`;
                 <i class="fas fa-walking"></i>
               </div>
               <div>
-                <h3 style="color:#1e40af;margin:0 0 4px 0">âœ… Berhasil</h3>
+                <h3 style="color:#1e40af;margin:0 0 4px 0">✅ Berhasil</h3>
               </div>
             </div>
             <div class="info-box" style="background:white;border-radius:10px;padding:16px;margin:12px 0">
@@ -8805,7 +8827,7 @@ Terima kasih dan selamat berlatih!`;
           `• Total Pembayaran: ${formatCurrency(data.amount || 0)}\n` +
           `• Status: Menunggu Verifikasi Pembayaran\n\n` +
           `Jika Anda sudah melakukan transfer, mohon kirimkan kembali bukti transfer yang valid agar dapat kami verifikasi segera.\n\n` +
-          `Terima kasih! UGYM ðŸ’ª`;
+          `Terima kasih! UGYM 💪`;
         shareToWhatsApp(phone, text);
         return;
       }
@@ -8954,7 +8976,7 @@ Terima kasih dan selamat berlatih!`;
           .withSuccessHandler(function (res) {
             hideLoading();
             if (res.success) {
-              showToast('âœ… ' + res.message, 'success');
+              showToast('✅ ' + res.message, 'success');
               if (currentView === 'catalog') loadPackageList();
             } else {
               showToast('âŒ ' + res.message, 'error');
@@ -8974,7 +8996,7 @@ Terima kasih dan selamat berlatih!`;
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res && res.success) {
-                showToast('âœ… ' + res.message, 'success');
+                showToast('✅ ' + res.message, 'success');
                 showAlert('Informasi Login',
                   'Akun berhasil dibuat:\n\n' +
                   '1. Super Admin: superadmin / superadmin123\n' +
@@ -9006,7 +9028,7 @@ Terima kasih dan selamat berlatih!`;
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res && res.success) {
-                showToast('âœ… ' + res.message, 'success');
+                showToast('✅ ' + res.message, 'success');
               } else {
                 showToast('âŒ Gagal: ' + (res.message || 'Error'), 'error');
               }
@@ -9225,7 +9247,7 @@ Terima kasih dan selamat berlatih!`;
           if (res && res.success) {
             const i = res.info;
             showAlert('adminAlert',
-              `ðŸ“Š INFO SISTEM\n\n` +
+              `📊 INFO SISTEM\n\n` +
               `Versi        : v${i.version || '6.1.0'}\n` +
               `Spreadsheet  : ${i.spreadsheetId?.substring(0, 8)}...\n` +
               `Sheet Aktif  : ${i.sheetCount || '-'}\n` +
@@ -9235,7 +9257,7 @@ Terima kasih dan selamat berlatih!`;
               `User Email   : ${i.userEmail || '-'}\n` +
               `Kuota Email  : ${i.emailQuota || 0}/100\n` +
               `Cache Aktif  : ${i.cacheActive ? 'Ya' : 'Tidak'}\n\n` +
-              `ðŸ’° BIAYA\n` +
+              `💰 BIAYA\n` +
               `Registrasi   : ${formatCurrency(i.registrationFee || 0)}\n` +
               `Visit Harian : ${formatCurrency(i.visitFee || 0)}\n\n` +
               `ðŸ¦ REKENING\n` +
@@ -9290,7 +9312,7 @@ Terima kasih dan selamat berlatih!`;
           btn.disabled = false;
 
           if (res && res.success) {
-            showAlert('createUserAlert', `âœ… Akun "${username}" berhasil dibuat!`, 'success');
+            showAlert('createUserAlert', `✅ Akun "${username}" berhasil dibuat!`, 'success');
             ['cu_name', 'cu_phone', 'cu_username', 'cu_email', 'cu_password'].forEach(id => {
               const el = document.getElementById(id);
               if (el) el.value = '';
@@ -9317,7 +9339,7 @@ Terima kasih dan selamat berlatih!`;
 
     function showDuplicateCleanupDialog() {
       const choice = prompt(
-        'ðŸ§¹ CLEANUP DUPLIKAT DATA\n\n' +
+        '🧹 CLEANUP DUPLIKAT DATA\n\n' +
         'Pilih jenis cleanup:\n\n' +
         '1. Hapus duplikat MEMBER (berdasarkan email & nomor HP)\n' +
         '2. Hapus duplikat TRANSAKSI (berdasarkan URL bukti bayar)\n' +
@@ -9347,9 +9369,9 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           hideLoading();
           if (res && res.success) {
-            showToast(`âœ… ${res.message}`, 'success');
+            showToast(`✅ ${res.message}`, 'success');
             showAlert('adminAlert',
-              `âœ… Cleanup selesai!\n\nDihapus: ${res.removed || 0} duplikat\n\nDetail: ${JSON.stringify(res.duplicates || []).substring(0, 200)}`,
+              `✅ Cleanup selesai!\n\nDihapus: ${res.removed || 0} duplikat\n\nDetail: ${JSON.stringify(res.duplicates || []).substring(0, 200)}`,
               'success'
             );
           } else {
@@ -9439,7 +9461,7 @@ Terima kasih dan selamat berlatih!`;
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res.success) {
-                showToast('âœ… ' + res.message, 'success');
+                showToast('✅ ' + res.message, 'success');
                 loadUserList();
               } else {
                 showToast('âŒ ' + res.message, 'error');
@@ -9694,7 +9716,7 @@ Terima kasih dan selamat berlatih!`;
         .withSuccessHandler(function (res) {
           hideLoading();
           if (res && res.success) {
-            showToast('âœ… Pengeluaran berhasil dicatat', 'success');
+            showToast('✅ Pengeluaran berhasil dicatat', 'success');
             document.getElementById('expenseForm').reset();
             document.getElementById('exp_date').valueAsDate = new Date();
             refreshExpenses();
@@ -9719,7 +9741,7 @@ Terima kasih dan selamat berlatih!`;
             .withSuccessHandler(function (res) {
               hideLoading();
               if (res && res.success) {
-                showToast('âœ… Pengeluaran dihapus', 'success');
+                showToast('✅ Pengeluaran dihapus', 'success');
                 refreshExpenses();
               } else {
                 showToast('âŒ Gagal: ' + (res.message || 'Error'), 'error');
@@ -10487,7 +10509,7 @@ Terima kasih dan selamat berlatih!`;
       // Cek Cache untuk laporan hari ini
       const cachedReport = LocalCache.get('today_full_report');
       if (cachedReport) {
-        console.log('âš¡ Showing Instant Cached Report');
+        console.log('⚡ Showing Instant Cached Report');
         renderDailyReport(cachedReport);
       } else {
         generateRangeReport();
