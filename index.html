@@ -4666,7 +4666,7 @@ Terima kasih dan selamat berlatih!`;
                       <i class="fas fa-check"></i>
                     </div>
                     <div>
-                      <h3 style="color:#166534;margin:0 0 4px 0">✅ âœ… ${escapeHtml(res.message || 'Registrasi Berhasil')}</h3>
+                      <h3 style="color:#166534;margin:0 0 4px 0">✅ ${escapeHtml(res.message || 'Registrasi Berhasil')}</h3>
                       <p style="color:#166534;opacity:0.8;margin:0;font-size:13px">${formatDateTime(checkinTime)}</p>
                     </div>
                   </div>
@@ -4728,7 +4728,7 @@ Terima kasih dan selamat berlatih!`;
                   
                   ${res.qrCodeUrl ? `
                     <div style="text-align:center;margin:20px 0 10px 0">
-                      <h4 style="color:#334155;margin:0 0 12px 0">ðŸŽ« QR Code Member</h4>
+                      <h4 style="color:#334155;margin:0 0 12px 0">QR Code Member</h4>
                       <img src="${escapeHtml(res.qrCodeUrl)}" alt="QR Code" style="width:150px;height:150px;border:2px solid #667eea;border-radius:8px;padding:8px">
                     </div>
                   ` : ''}
