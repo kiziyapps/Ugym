@@ -605,6 +605,10 @@
   </script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     :root {
       --primary: #d4af37;
       --primary-light: #fdf8e7;
@@ -1075,6 +1079,7 @@
 
     .form-group {
       margin-bottom: 20px;
+      min-width: 0;
     }
 
     .form-label {
@@ -1095,6 +1100,10 @@
       margin-bottom: 20px;
     }
 
+    .form-row > * {
+      min-width: 0;
+    }
+
     @media (max-width: 640px) {
       .form-row {
         grid-template-columns: 1fr;
@@ -1102,12 +1111,23 @@
       }
     }
 
-    .form-input {
+    .form-input,
+    .form-control,
+    input[type="text"],
+    input[type="number"],
+    input[type="email"],
+    input[type="date"],
+    input[type="password"],
+    input[type="tel"],
+    select,
+    textarea {
       width: 100%;
-      padding: 14px 16px;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
       border: 1px solid var(--border-color);
-      border-radius: 14px;
-      font-size: 16px;
+      border-radius: 12px;
+      font-size: 15px;
       transition: all 0.25s ease;
       background: var(--bg-card);
       color: var(--text-main);
@@ -1116,14 +1136,19 @@
       box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
     }
 
-    .form-input::placeholder {
+    .form-input::placeholder,
+    .form-control::placeholder {
       color: #C7C7CC;
     }
 
-    .form-input:focus {
+    .form-input:focus,
+    .form-control:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(88, 86, 214, 0.15);
+      box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.15);
       background: var(--bg-card);
     }
 
@@ -1545,13 +1570,14 @@
     .modal-container {
       background: var(--bg-light);
       border-radius: 24px;
-      max-width: 600px;
+      max-width: min(600px, 94vw);
       width: 100%;
       box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
       overflow: hidden;
       display: flex;
       flex-direction: column;
       max-height: 90vh;
+      box-sizing: border-box;
       animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -1608,7 +1634,9 @@
     .modal-body {
       padding: 24px;
       overflow-y: auto;
+      overflow-x: hidden;
       flex: 1;
+      box-sizing: border-box;
     }
 
     .modal-footer {
@@ -5093,10 +5121,10 @@ Terima kasih dan selamat berlatih!`;
       let html = '';
       members.slice(0, 10).forEach(m => {
         const statusClass = m.status === 'Aktif' ? 'success' : (m.status === 'Expired' ? 'danger' : 'warning');
-        const memberJson = encodeURIComponent(JSON.stringify(m)).replace(/'/g, "%27");
+        const memberJson = JSON.stringify(m).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
 
         html += `
-          <div onclick="${selectFnName}(decodeURIComponent('${memberJson}'))" 
+          <div onclick="${selectFnName}('${memberJson}')" 
                style="padding:12px 14px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:13px;transition:0.2s" 
                onmouseover="this.style.background='#f0f4ff'" 
                onmouseout="this.style.background='white'">
@@ -6123,51 +6151,88 @@ Terima kasih dan selamat berlatih!`;
       loadPackageList();
     }
 
-    function loadPackageList() {
+    let __packagesCache = null;
+
+    function _renderPackageTable(list) {
+      const container = document.getElementById('packageListTable');
+      if (!container) return;
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-secondary)">Belum ada paket terdaftar.</div>';
+        return;
+      }
+      container.innerHTML = `
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nama Paket</th>
+                <th>Tipe</th>
+                <th>Durasi</th>
+                <th>Harga</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map(p => {
+                const id = p['ID Paket'] || p.id || '';
+                const name = p['Nama Paket'] || p.name || '';
+                const type = p['Tipe Paket'] || p.type || 'REGULAR';
+                const duration = p['Durasi'] || p.duration || '';
+                const price = p['Harga'] !== undefined ? p['Harga'] : (p.price || 0);
+                const isActive = p['Is Active'] === true || p['Is Active'] === 'TRUE' || p.active === true;
+                return `
+                <tr>
+                  <td><code>${id}</code></td>
+                  <td><b>${escapeHtml(name)}</b></td>
+                  <td><span class="badge badge-info">${type}</span></td>
+                  <td>${duration}</td>
+                  <td>${formatCurrency(price)}</td>
+                  <td><span class="badge badge-${isActive ? 'success' : 'secondary'}">${isActive ? 'Aktif' : 'Non-Aktif'}</span></td>
+                  <td>
+                    <div style="display:flex; gap:4px">
+                      <button class="btn btn-sm btn-outline" onclick="openPackageModal('${id}')" title="Edit Paket">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#fecaca" onclick="confirmDeletePackage('${id}', '${escapeJs(name)}')" title="Hapus Paket">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function loadPackageList(force = false) {
+      if (!force) {
+        if (__packagesCache && __packagesCache.length > 0) {
+          _renderPackageTable(__packagesCache);
+          return;
+        }
+        const cached = LocalCache.get('master_packages');
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          __packagesCache = cached;
+          _renderPackageTable(__packagesCache);
+          return;
+        }
+      }
+
       google.script.run
         .withSuccessHandler(function (res) {
-          if (res.success) {
-            const list = res.packages;
-            document.getElementById('packageListTable').innerHTML = `
-              <div style="overflow-x:auto">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Nama Paket</th>
-                      <th>Tipe</th>
-                      <th>Durasi</th>
-                      <th>Harga</th>
-                      <th>Status</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${list.map(p => `
-                      <tr>
-                        <td><code>${p['ID Paket']}</code></td>
-                        <td><b>${escapeHtml(p['Nama Paket'])}</b></td>
-                        <td><span class="badge badge-info">${p['Tipe Paket']}</span></td>
-                        <td>${p['Durasi']} hari</td>
-                        <td>${formatCurrency(p['Harga'])}</td>
-                        <td><span class="badge badge-${p['Is Active'] ? 'success' : 'secondary'}">${p['Is Active'] ? 'Aktif' : 'Non-Aktif'}</span></td>
-                        <td>
-                          <div style="display:flex; gap:4px">
-                            <button class="btn btn-sm btn-outline" onclick="openPackageModal('${p['ID Paket']}')" title="Edit Paket">
-                              <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline" style="color:#ef4444; border-color:#fecaca" onclick="confirmDeletePackage('${p['ID Paket']}', '${escapeJs(p['Nama Paket'])}')" title="Hapus Paket">
-                              <i class="fas fa-trash"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    `).join('')}
-                  </tbody>
-                </table>
-              </div>
-            `;
+          if (res && res.success) {
+            __packagesCache = res.packages || [];
+            LocalCache.set('master_packages', __packagesCache, 60);
+            _renderPackageTable(__packagesCache);
           }
+        })
+        .withFailureHandler(function (err) {
+          console.error('loadPackageList Error:', err);
         })
         .getFullCatalogue();
     }
@@ -6693,12 +6758,24 @@ Terima kasih dan selamat berlatih!`;
       showConfirm(`Hapus paket "${name}"?`, function (ok) {
         if (!ok) return;
 
-        // 1. QUEUE SYNC BACKGROUND
+        // 1. UPDATE LOKAL INSTAN (OPTIMISTIC REALTIME)
+        LocalCache.update('master_packages', (pkgs) => {
+          const list = Array.isArray(pkgs) ? pkgs : (__packagesCache || []);
+          const filtered = list.filter(p => (p['ID Paket'] || p.id) !== id);
+          __packagesCache = filtered;
+          _renderPackageTable(filtered);
+          return filtered;
+        });
+
+        if (__packagesCache) {
+          __packagesCache = __packagesCache.filter(p => (p['ID Paket'] || p.id) !== id);
+          _renderPackageTable(__packagesCache);
+        }
+
+        // 2. QUEUE SYNC BACKGROUND
         SyncQueue.add('deletePackage', [id, currentUser ? currentUser.name : 'Admin']);
 
-        showToast('✅ Paket dimasukkan ke antrean penghapusan', 'success');
-        // Refresh UI lokal
-        setTimeout(loadPackageList, 500);
+        showToast('✅ Paket berhasil dihapus', 'success');
       });
     }
 
@@ -6706,19 +6783,30 @@ Terima kasih dan selamat berlatih!`;
       showConfirm(`Hapus produk "${name}"?`, function (ok) {
         if (!ok) return;
 
-        // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
+        // 1. UPDATE LOKAL INSTAN (OPTIMISTIC REALTIME)
         LocalCache.update('pos_products', (prods) => {
-          const list = Array.isArray(prods) ? prods : [];
+          const list = Array.isArray(prods) ? prods : (__productsCache || []);
           const filtered = list.filter(p => p.id !== id);
           posProducts = filtered;
+          __productsCache = filtered;
           _renderProductTable(filtered);
+          if (typeof renderPOSProducts === 'function') renderPOSProducts();
           return filtered;
         });
 
-        // 2. QUEUE
+        if (__productsCache) {
+          __productsCache = __productsCache.filter(p => p.id !== id);
+        }
+        if (posProducts) {
+          posProducts = posProducts.filter(p => p.id !== id);
+        }
+        _renderProductTable(__productsCache || posProducts || []);
+        if (typeof renderPOSProducts === 'function') renderPOSProducts();
+
+        // 2. QUEUE SYNC BACKGROUND
         SyncQueue.add('deleteProduct', [id, currentUser ? currentUser.name : 'Admin']);
 
-        showToast('✅ Produk dimasukkan ke antrean penghapusan', 'success');
+        showToast('✅ Produk berhasil dihapus', 'success');
       });
     }
 
@@ -6776,37 +6864,57 @@ Terima kasih dan selamat berlatih!`;
 
     function openPackageModal(id) {
       document.getElementById('packageModal').style.display = 'flex';
+      
+      const populatePkgForm = (p) => {
+        if (!p) {
+          showToast('❌ Detail paket tidak ditemukan', 'error');
+          return;
+        }
+        document.getElementById('pkg_id').value = p['ID Paket'] || p.id || id;
+        document.getElementById('pkg_name').value = p['Nama Paket'] || p.name || '';
+        document.getElementById('pkg_type').value = p['Tipe Paket'] || p.type || 'REGULAR';
+
+        const durStr = (p['Durasi'] || p.duration || '30 Hari').toString();
+        const match = durStr.match(/(\d+)\s*(.*)/);
+        if (match) {
+          document.getElementById('pkg_duration').value = match[1];
+          document.getElementById('pkg_unit').value = match[2] || 'Hari';
+        } else {
+          document.getElementById('pkg_duration').value = parseInt(durStr) || 30;
+          document.getElementById('pkg_unit').value = 'Hari';
+        }
+
+        document.getElementById('pkg_price').value = p['Harga'] !== undefined ? p['Harga'] : (p.price || 0);
+        document.getElementById('pkg_promo').value = p['Promo'] || p.promo || 0;
+        document.getElementById('pkg_desc').value = p['Deskripsi'] || p.description || '';
+        document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE' || p.active === true;
+
+        if (document.getElementById('pkg_sessions')) {
+          document.getElementById('pkg_sessions').value = (p['Jumlah Sesi'] !== undefined ? p['Jumlah Sesi'] : p.sessions) || '';
+        }
+        toggleSessionsField();
+      };
+
       if (id) {
         document.getElementById('packageModalTitle').textContent = 'Edit Paket';
+        const cachedPkgs = __packagesCache || LocalCache.get('master_packages');
+        if (cachedPkgs && Array.isArray(cachedPkgs)) {
+          const found = cachedPkgs.find(x => (x['ID Paket'] || x.id) == id);
+          if (found) {
+            populatePkgForm(found);
+            return;
+          }
+        }
+
         showLoading();
         google.script.run
           .withSuccessHandler(function (res) {
             hideLoading();
-            if (res.success) {
-              const p = res.packages.find(x => x['ID Paket'] == id);
-              document.getElementById('pkg_id').value = p['ID Paket'];
-              document.getElementById('pkg_name').value = p['Nama Paket'];
-              document.getElementById('pkg_type').value = p['Tipe Paket'];
-
-              const durStr = (p['Durasi'] || '30 Hari').toString();
-              const match = durStr.match(/(\d+)\s*(.*)/);
-              if (match) {
-                document.getElementById('pkg_duration').value = match[1];
-                document.getElementById('pkg_unit').value = match[2] || 'Hari';
-              } else {
-                document.getElementById('pkg_duration').value = parseInt(durStr) || 30;
-                document.getElementById('pkg_unit').value = 'Hari';
-              }
-
-              document.getElementById('pkg_price').value = p['Harga'];
-              document.getElementById('pkg_promo').value = p['Promo'] || 0;
-              document.getElementById('pkg_desc').value = p['Deskripsi'];
-              document.getElementById('pkg_active').checked = p['Is Active'] === true || p['Is Active'] === 'TRUE';
-
-              if (document.getElementById('pkg_sessions')) {
-                document.getElementById('pkg_sessions').value = p['Jumlah Sesi'] !== undefined ? p['Jumlah Sesi'] : '';
-              }
-              toggleSessionsField();
+            if (res && res.success) {
+              __packagesCache = res.packages || [];
+              LocalCache.set('master_packages', __packagesCache, 60);
+              const found = __packagesCache.find(x => (x['ID Paket'] || x.id) == id);
+              populatePkgForm(found);
             }
           })
           .withFailureHandler(function (err) {
@@ -6844,9 +6952,11 @@ Terima kasih dan selamat berlatih!`;
       const priceVal = parseFloat(document.getElementById('pkg_price').value) || 0;
       const promoVal = parseFloat(document.getElementById('pkg_promo').value) || 0;
       const totalVal = priceVal - promoVal;
+      const existingId = document.getElementById('pkg_id').value;
+      const pkgId = existingId || ('PKG_' + Date.now());
 
       const data = {
-        'ID Paket': document.getElementById('pkg_id').value,
+        'ID Paket': pkgId,
         'Nama Paket': document.getElementById('pkg_name').value,
         'Tipe Paket': typeVal,
         'Durasi': fullDuration,
@@ -6865,13 +6975,34 @@ Terima kasih dan selamat berlatih!`;
 
       if (!data['Nama Paket']) { showToast('⚠️ Nama paket wajib diisi', 'warning'); return; }
 
-      // 1. QUEUE SYNC BACKGROUND
+      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC REALTIME)
+      LocalCache.update('master_packages', (pkgs) => {
+        let list = Array.isArray(pkgs) ? [...pkgs] : (__packagesCache ? [...__packagesCache] : []);
+        const idx = list.findIndex(p => (p['ID Paket'] || p.id) === pkgId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...data };
+        } else {
+          list.push(data);
+        }
+        __packagesCache = list;
+        _renderPackageTable(list);
+        return list;
+      });
+
+      if (!__packagesCache) __packagesCache = [];
+      const idx = __packagesCache.findIndex(p => (p['ID Paket'] || p.id) === pkgId);
+      if (idx !== -1) {
+        __packagesCache[idx] = { ...__packagesCache[idx], ...data };
+      } else {
+        __packagesCache.push(data);
+      }
+      _renderPackageTable(__packagesCache);
+
+      // 2. QUEUE SYNC BACKGROUND
       SyncQueue.add('savePackage', [data]);
 
-      showToast('✅ Paket dimasukkan ke antrean', 'success');
+      showToast('✅ Paket berhasil disimpan', 'success');
       closePackageModal();
-      // Update UI lokal sederhana (opsional: bisa lebih detail)
-      setTimeout(loadPackageList, 500);
     }
 
     let productModalScanner = null;
@@ -6916,21 +7047,26 @@ Terima kasih dan selamat berlatih!`;
           }
         };
 
-        if (__productsCache) {
-          const p = __productsCache.find(x => x.id == id);
-          populateForm(p);
-        } else {
-          showLoading();
-          google.script.run
-            .withSuccessHandler(function (res) {
-              hideLoading();
-              if (res.success) {
-                __productsCache = res.products;
-                populateForm(res.products.find(x => x.id == id));
-              }
-            })
-            .getFullProducts();
+        if (__productsCache || posProducts || LocalCache.get('pos_products')) {
+          const list = __productsCache || posProducts || LocalCache.get('pos_products');
+          const p = list.find(x => x.id == id || x['ID Produk'] == id);
+          if (p) {
+            populateForm(p);
+            return;
+          }
         }
+        showLoading();
+        google.script.run
+          .withSuccessHandler(function (res) {
+            hideLoading();
+            if (res && res.success) {
+              __productsCache = res.products;
+              posProducts = res.products;
+              LocalCache.set('pos_products', res.products, 60);
+              populateForm(res.products.find(x => x.id == id));
+            }
+          })
+          .getFullProducts();
       } else {
         document.getElementById('productModalTitle').textContent = 'Tambah Produk';
         if (scannerArea) scannerArea.style.display = 'block';
@@ -6999,8 +7135,11 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function saveProductSubmit() {
+      const existingId = document.getElementById('prod_id').value;
+      const prodId = existingId || ('TEMP_' + Date.now());
+
       const data = {
-        'ID Produk': document.getElementById('prod_id').value,
+        'ID Produk': prodId,
         'Nama Produk': document.getElementById('prod_name').value,
         'Barcode': document.getElementById('prod_barcode').value,
         'Kategori': document.getElementById('prod_category').value,
@@ -7015,25 +7154,49 @@ Terima kasih dan selamat berlatih!`;
 
       if (!data['Nama Produk']) { showToast('⚠️ Nama produk wajib diisi', 'warning'); return; }
 
-      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC)
-      const isNew = !data['ID Produk'];
+      // 1. UPDATE LOKAL INSTAN (OPTIMISTIC REALTIME)
+      const newItem = {
+        id: prodId,
+        name: data['Nama Produk'],
+        barcode: data['Barcode'],
+        category: data['Kategori'],
+        buyPrice: data['Harga Beli'],
+        price: data['Harga Jual'],
+        stock: data['Stok'],
+        unit: data['Satuan'],
+        photoUrl: data['Foto URL']
+      };
+
       LocalCache.update('pos_products', (prods) => {
-        const list = Array.isArray(prods) ? prods : [];
-        if (isNew) {
-          list.push({ id: 'TEMP_' + Date.now(), name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] });
+        let list = Array.isArray(prods) ? [...prods] : [];
+        const idx = list.findIndex(p => p.id === prodId || p['ID Produk'] === prodId);
+        if (idx !== -1) {
+          list[idx] = { ...list[idx], ...newItem };
         } else {
-          const idx = list.findIndex(p => p.id === data['ID Produk']);
-          if (idx !== -1) list[idx] = { ...list[idx], name: data['Nama Produk'], barcode: data['Barcode'], category: data['Kategori'], price: data['Harga Jual'], stock: data['Stok'], unit: data['Satuan'] };
+          list.push(newItem);
         }
         posProducts = list;
+        __productsCache = list;
         _renderProductTable(list);
+        if (typeof renderPOSProducts === 'function') renderPOSProducts();
         return list;
       });
+
+      if (!__productsCache) __productsCache = [];
+      const idxCache = __productsCache.findIndex(p => p.id === prodId || p['ID Produk'] === prodId);
+      if (idxCache !== -1) {
+        __productsCache[idxCache] = { ...__productsCache[idxCache], ...newItem };
+      } else {
+        __productsCache.push(newItem);
+      }
+      posProducts = __productsCache;
+      _renderProductTable(__productsCache);
+      if (typeof renderPOSProducts === 'function') renderPOSProducts();
 
       // 2. QUEUE SYNC BACKGROUND
       SyncQueue.add('saveProduct', [data]);
 
-      showToast('✅ Produk dimasukkan ke antrean', 'success');
+      showToast('✅ Produk berhasil disimpan', 'success');
       closeProductModal();
     }
 
@@ -7827,9 +7990,9 @@ Terima kasih dan selamat berlatih!`;
             if (res && res.success && res.visitors && res.visitors.length > 0) {
               let html = '';
               res.visitors.forEach(v => {
-                const visitorJson = encodeURIComponent(JSON.stringify(v)).replace(/'/g, "%27");
+                const visitorJson = JSON.stringify(v).replace(/'/g, "&#39;").replace(/"/g, '&quot;');
                 html += `
-                  <div onclick="selectVisitorForVisit(decodeURIComponent('${visitorJson}'))" 
+                  <div onclick="selectVisitorForVisit('${visitorJson}')" 
                        style="padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;margin-bottom:6px;font-size:12px">
                     <b>${escapeHtml(v.name)}</b>
                     <div style="color:#64748b;font-size:11px">HP: ${v.phone}</div>
@@ -8203,7 +8366,11 @@ Terima kasih dan selamat berlatih!`;
                   statusClass = 'warning';
                 }
 
-                const memberJson = encodeURIComponent(JSON.stringify(m)).replace(/'/g, "%27");
+                const memberJson = JSON.stringify(m)
+                  .replace(/'/g, "&#39;")
+                  .replace(/"/g, '&quot;')
+                  .replace(/\n/g, '\\n')
+                  .replace(/\r/g, '\\r');
 
                 const canRegisterPT = m.status === 'Aktif';
                 const opacityStyle = canRegisterPT ? '' : 'opacity:0.7';
@@ -8211,7 +8378,7 @@ Terima kasih dan selamat berlatih!`;
                 const hoverStyle = canRegisterPT ? 'this.style.background="#f0f4ff"' : '';
 
                 html += `
-                  <div onclick="${canRegisterPT ? `selectMemberForPT(decodeURIComponent('${memberJson}'))` : 'showToast(\'Member tidak aktif, tidak bisa registrasi PT\', \'warning\')'}" 
+                  <div onclick="${canRegisterPT ? `selectMemberForPT('${memberJson}')` : 'showToast(\'Member tidak aktif, tidak bisa registrasi PT\', \'warning\')'}" 
                        style="padding:12px 14px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:${cursorStyle};margin-bottom:6px;font-size:13px;transition:0.2s;${opacityStyle}" 
                        onmouseover="${canRegisterPT ? hoverStyle : ''}" 
                        onmouseout="this.style.background='white'">
@@ -9935,46 +10102,73 @@ Terima kasih dan selamat berlatih!`;
                 return;
               }
 
-              if (res.isProductSummary) {
+              if (res.isRevenueBreakdown || res.isRevenueSummary || res.isProductSummary) {
                 const isStaffOrKasir = currentUser && (currentUser.role === 'Staff' || currentUser.role === 'Kasir');
+                const showNetProfit = res.hasNetProfit && !isStaffOrKasir;
+                const nameHeader = res.hasNetProfit ? 'Nama Produk' : 'Nama Paket';
 
                 let totalQty = 0;
-                let totalOmset = 0;
+                let totalTransfer = 0;
+                let totalQris = 0;
+                let totalDebit = 0;
+                let totalCash = 0;
+                let grandTotal = 0;
                 let totalNetProfit = 0;
 
                 res.data.forEach(item => {
                   totalQty += Number(item.qty) || 0;
-                  totalOmset += Number(item.omset) || 0;
-                  totalNetProfit += Number(item.netProfit) || 0;
+                  totalTransfer += Number(item.transfer) || 0;
+                  totalQris += Number(item.qris) || 0;
+                  totalDebit += Number(item.debit) || 0;
+                  totalCash += Number(item.cash) || 0;
+                  grandTotal += Number(item.total !== undefined ? item.total : item.omset) || 0;
+                  if (showNetProfit) {
+                    totalNetProfit += Number(item.netProfit) || 0;
+                  }
                 });
 
                 let html = `
-                  <div class="table-responsive">
-                    <table class="table">
+                  <div style="overflow-x:auto; width:100%">
+                    <table class="data-table" style="width:100%; border-collapse:collapse; font-size:14px">
                       <thead>
-                        <tr>
-                          <th>Nama Produk</th>
-                          <th style="text-align: right;">Qty</th>
-                          <th style="text-align: right;">Omset</th>
-                          ${!isStaffOrKasir ? '<th style="text-align: right;">Net Profit</th>' : ''}
+                        <tr style="background:var(--bg-light); border-bottom:2px solid var(--border-color)">
+                          <th style="text-align:left; padding:12px 14px; font-weight:700; color:var(--text-main)">${nameHeader}</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Qty</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Transfer Bank</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Qris</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Debit</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Cash</th>
+                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--primary)">Total</th>
+                          ${showNetProfit ? '<th style="text-align:right; padding:12px 14px; font-weight:700; color:#22c55e">Net Profit</th>' : ''}
                         </tr>
                       </thead>
                       <tbody>
-                        ${res.data.map(item => `
-                          <tr>
-                            <td>${escapeHtml(item.name)}</td>
-                            <td style="text-align: right;">${Number(item.qty) || 0}</td>
-                            <td style="text-align: right;">${formatCurrency(item.omset)}</td>
-                            ${!isStaffOrKasir ? `<td style="text-align: right;">${formatCurrency(item.netProfit)}</td>` : ''}
+                        ${res.data.map(item => {
+                          const itemTotal = Number(item.total !== undefined ? item.total : item.omset) || 0;
+                          return `
+                          <tr style="border-bottom:1px solid var(--border-color)">
+                            <td style="text-align:left; padding:12px 14px; font-weight:600">${escapeHtml(item.name)}</td>
+                            <td style="text-align:right; padding:12px 14px">${Number(item.qty) || 0}</td>
+                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.transfer || 0)}</td>
+                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.qris || 0)}</td>
+                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.debit || 0)}</td>
+                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.cash || 0)}</td>
+                            <td style="text-align:right; padding:12px 14px; font-weight:700; color:var(--primary)">${formatCurrency(itemTotal)}</td>
+                            ${showNetProfit ? `<td style="text-align:right; padding:12px 14px; font-weight:700; color:#22c55e">${formatCurrency(item.netProfit || 0)}</td>` : ''}
                           </tr>
-                        `).join('')}
+                          `;
+                        }).join('')}
                       </tbody>
                       <tfoot>
-                        <tr style="font-weight: bold; background: var(--bg-light); border-top: 2px solid var(--border-color);">
-                          <td>TOTAL</td>
-                          <td style="text-align: right;">${totalQty}</td>
-                          <td style="text-align: right;">${formatCurrency(totalOmset)}</td>
-                          ${!isStaffOrKasir ? `<td style="text-align: right;">${formatCurrency(totalNetProfit)}</td>` : ''}
+                        <tr style="font-weight:700; background:var(--bg-light); border-top:2px solid var(--border-color); border-bottom:2px solid var(--border-color)">
+                          <td style="text-align:left; padding:14px; font-size:14px; font-weight:800">TOTAL</td>
+                          <td style="text-align:right; padding:14px; font-size:14px">${totalQty}</td>
+                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalTransfer)}</td>
+                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalQris)}</td>
+                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalDebit)}</td>
+                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalCash)}</td>
+                          <td style="text-align:right; padding:14px; font-size:14px; color:var(--primary); font-weight:800">${formatCurrency(grandTotal)}</td>
+                          ${showNetProfit ? `<td style="text-align:right; padding:14px; font-size:14px; color:#22c55e; font-weight:800">${formatCurrency(totalNetProfit)}</td>` : ''}
                         </tr>
                       </tfoot>
                     </table>
@@ -9983,8 +10177,8 @@ Terima kasih dan selamat berlatih!`;
                 container.innerHTML = html;
               } else {
                 let html = `
-                  <div class="table-responsive">
-                    <table class="table">
+                  <div class="table-responsive" style="overflow-x:auto; width:100%">
+                    <table class="table data-table" style="width:100%">
                       <thead>
                         <tr>
                           ${res.headers.map(h => `<th>${h}</th>`).join('')}
@@ -10972,6 +11166,16 @@ Terima kasih dan selamat berlatih!`;
       showConfirm('PERHATIAN: Anda yakin ingin menghapus transaksi ini? Data terkait seperti stok atau check-in akan ikut disesuaikan. Data yang dihapus akan masuk ke riwayat penghapusan.', function (ok) {
         if (!ok) return;
 
+        // Optimistic local DOM removal
+        const targets = document.querySelectorAll('tr, .list-item');
+        targets.forEach(el => {
+          if (el.innerHTML.includes(transactionId)) {
+            el.style.transition = 'all 0.3s ease';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+          }
+        });
+
         showLoading('Menghapus transaksi...');
         google.script.run
           .withSuccessHandler(function (res) {
@@ -10979,7 +11183,7 @@ Terima kasih dan selamat berlatih!`;
             if (res.success) {
               showToast(res.message, 'success');
               // Refresh tables
-              const contentArea = document.getElementById('contentArea').innerHTML;
+              const contentArea = document.getElementById('contentArea')?.innerHTML || '';
               if (contentArea.includes('id="posTodayTransactions"')) {
                 loadTodayPOSTransactions();
               }
@@ -11013,13 +11217,30 @@ Terima kasih dan selamat berlatih!`;
       showConfirm('Anda yakin ingin menghapus data check-in ini? Jika ini adalah check-in PT, sesi PT member akan dikembalikan.', function (ok) {
         if (!ok) return;
 
+        // Optimistic local DOM removal
+        const row = document.getElementById('opt_ci_' + checkinId) || document.getElementById('ci_' + checkinId);
+        if (row) row.remove();
+        const targets = document.querySelectorAll('tr, .list-item');
+        targets.forEach(el => {
+          if (el.innerHTML.includes(checkinId)) {
+            el.style.transition = 'all 0.3s ease';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+          }
+        });
+        const dashCheckins = document.getElementById('dash_checkinsToday');
+        if (dashCheckins) {
+          const current = parseInt(dashCheckins.textContent) || 0;
+          dashCheckins.textContent = Math.max(0, current - 1);
+        }
+
         showLoading('Menghapus check-in...');
         google.script.run
           .withSuccessHandler(function (res) {
             hideLoading();
             if (res.success) {
               showToast(res.message, 'success');
-              loadTodayCheckins();
+              if (typeof loadTodayCheckins === 'function') loadTodayCheckins();
             } else {
               showToast(res.message, 'error');
             }
@@ -11040,13 +11261,23 @@ Terima kasih dan selamat berlatih!`;
       showConfirm('Anda yakin ingin menghapus riwayat pembaruan stok ini? Stok produk terkait akan dikembalikan ke nilai sebelum pembaruan.', function (ok) {
         if (!ok) return;
 
+        // Optimistic local DOM removal
+        const targets = document.querySelectorAll('tr, .list-item');
+        targets.forEach(el => {
+          if (el.innerHTML.includes(restockId)) {
+            el.style.transition = 'all 0.3s ease';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+          }
+        });
+
         showLoading('Menghapus riwayat stok...');
         google.script.run
           .withSuccessHandler(function (res) {
             hideLoading();
             if (res.success) {
               showToast(res.message, 'success');
-              loadRestockHistory();
+              if (typeof loadRestockHistory === 'function') loadRestockHistory();
               if (typeof loadPOSProducts === 'function') loadPOSProducts(true);
               if (typeof loadCatalogView === 'function' && document.getElementById('catalogProductsTable')) loadCatalogProducts();
             } else {
