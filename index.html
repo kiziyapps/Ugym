@@ -1443,12 +1443,12 @@
       font-size: 14px;
       color: var(--text-main);
       vertical-align: middle;
+      white-space: nowrap;
     }
 
     .data-table td b {
-      display: block;
-      min-width: 150px;
-      /* Min width for names */
+      display: inline-block;
+      white-space: nowrap;
     }
 
     .data-table tr:hover td {
@@ -3209,6 +3209,18 @@
     }
 
 
+    function getCurrentMonthRange() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${y}-${m}-${d}`;
+      return {
+        start: todayStr,
+        end: todayStr
+      };
+    }
+
     function formatCurrency(n) {
       return 'Rp ' + (Number(n) || 0).toLocaleString('id-ID');
     }
@@ -3702,7 +3714,10 @@ Terima kasih dan selamat berlatih!`;
               <input type="date" id="dash_end_date" class="filter-input" style="border:none; background:transparent">
             </div>
             <button class="btn btn-primary btn-sm" onclick="refreshDashboard()"><i class="fas fa-sync-alt"></i> Update</button>
-            <button class="btn btn-success btn-sm" onclick="showDailyReportModal()">
+            <button class="btn btn-success btn-sm" onclick="downloadTransactionRecapExcel()" style="background:#16a34a; color:white; font-weight:600" title="Download Rekapitulasi Data Transaksi & Pengeluaran ke Excel">
+              <i class="fas fa-file-excel"></i> Export Excel
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="showDailyReportModal()" style="background:#8b5cf6; color:white">
               <i class="fas fa-file-invoice"></i> Laporan Harian
             </button>
           </div>
@@ -4001,8 +4016,9 @@ Terima kasih dan selamat berlatih!`;
     function resetDashboardFilter() {
       const start = document.getElementById('dash_start_date');
       const end = document.getElementById('dash_end_date');
-      if (start) start.value = '';
-      if (end) end.value = '';
+      const range = getCurrentMonthRange();
+      if (start) start.value = range.start;
+      if (end) end.value = range.end;
 
       refreshDashboard();
     }
@@ -4347,11 +4363,16 @@ Terima kasih dan selamat berlatih!`;
             </div>
 
             <div class="form-card" style="margin-top:20px">
-              <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
+              <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
                 <h4 style="margin:0"><i class="fas fa-clock"></i> Transaksi Terakhir</h4>
-                <button class="btn btn-sm btn-outline" onclick="loadRecentPanelTransactions('Registration', 'regRecentTransactions')">
-                  <i class="fas fa-sync-alt"></i>
-                </button>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <input type="date" id="reg_start_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+                  <span style="font-size:12px">s/d</span>
+                  <input type="date" id="reg_end_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+                  <button class="btn btn-sm btn-primary" onclick="loadRecentPanelTransactions('Registration', 'regRecentTransactions')" style="padding:4px 10px; height:32px" title="Filter Data">
+                    <i class="fas fa-filter"></i>
+                  </button>
+                </div>
               </div>
               <div class="form-card-body" id="regRecentTransactions" style="padding:0">
               </div>
@@ -5057,11 +5078,16 @@ Terima kasih dan selamat berlatih!`;
             </div>
 
             <div class="form-card" style="margin-top:20px">
-              <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
+              <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
                 <h4 style="margin:0"><i class="fas fa-clock"></i> Transaksi Terakhir</h4>
-                <button class="btn btn-sm btn-outline" onclick="loadRecentPanelTransactions('Extension', 'extRecentTransactions')">
-                  <i class="fas fa-sync-alt"></i>
-                </button>
+                <div style="display:flex; align-items:center; gap:6px">
+                  <input type="date" id="ext_start_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+                  <span style="font-size:12px">s/d</span>
+                  <input type="date" id="ext_end_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+                  <button class="btn btn-sm btn-primary" onclick="loadRecentPanelTransactions('Extension', 'extRecentTransactions')" style="padding:4px 10px; height:32px" title="Filter Data">
+                    <i class="fas fa-filter"></i>
+                  </button>
+                </div>
               </div>
               <div class="form-card-body" id="extRecentTransactions" style="padding:0">
               </div>
@@ -5596,9 +5622,37 @@ Terima kasih dan selamat berlatih!`;
         .getTodayPOSTransactions();
     }
 
-    function loadRecentPanelTransactions(typeFilter, containerId) {
+    function loadRecentPanelTransactions(typeFilter, containerId, startDateStr, endDateStr) {
       const el = document.getElementById(containerId);
       if (!el) return;
+
+      let prefix = '';
+      if (typeFilter === 'Registration') prefix = 'reg';
+      else if (typeFilter === 'Extension') prefix = 'ext';
+      else if (typeFilter === 'Visit') prefix = 'visit';
+      else if (typeFilter === 'PT') prefix = 'pt';
+
+      let s = startDateStr;
+      let e = endDateStr;
+      if (!s && prefix) {
+        const sEl = document.getElementById(prefix + '_start_date');
+        if (sEl && sEl.value) s = sEl.value;
+      }
+      if (!e && prefix) {
+        const eEl = document.getElementById(prefix + '_end_date');
+        if (eEl && eEl.value) e = eEl.value;
+      }
+
+      const range = getCurrentMonthRange();
+      if (!s) s = range.start;
+      if (!e) e = range.end;
+
+      if (prefix) {
+        const sEl = document.getElementById(prefix + '_start_date');
+        const eEl = document.getElementById(prefix + '_end_date');
+        if (sEl && !sEl.value) sEl.value = s;
+        if (eEl && !eEl.value) eEl.value = e;
+      }
 
       el.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat transaksi terakhir...</div>';
 
@@ -5609,7 +5663,7 @@ Terima kasih dan selamat berlatih!`;
           if (res && res.success) {
             let list = res.transactions || [];
             if (list.length === 0) {
-              el.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8">Belum ada transaksi terakhir</div>';
+              el.innerHTML = '<div style="text-align:center; padding:30px; color:#94a3b8">Belum ada transaksi terakhir untuk periode ini</div>';
               return;
             }
 
@@ -5631,13 +5685,11 @@ Terima kasih dan selamat berlatih!`;
               let trainer = '-';
               let sessions = '-';
 
-              // Fallback 1: Ambil jumlah sesi dari nama paket (e.g. "Personal Trainer 10 Sesi")
               if (t.packageName) {
                 const pkgMatch = t.packageName.match(/(\d+)\s*Sesi/i);
                 if (pkgMatch) sessions = pkgMatch[1];
               }
 
-              // Fallback 2: Ambil dari notes (jika ada data yang tersimpan)
               if (t.notes) {
                 const trainerMatch = t.notes.match(/Trainer:\s*([^.]+)/);
                 const sessionsMatch = t.notes.match(/Sesi:\s*(\d+)/);
@@ -5645,7 +5697,6 @@ Terima kasih dan selamat berlatih!`;
                 if (sessionsMatch && sessionsMatch[1]) sessions = sessionsMatch[1].trim();
               }
 
-              // Bersihkan jika ada string literal "undefined" dari data lama
               if (trainer === 'undefined' || !trainer) trainer = '-';
               if (sessions === 'undefined' || !sessions) sessions = '-';
 
@@ -5660,13 +5711,11 @@ Terima kasih dan selamat berlatih!`;
                 trainer: trainer,
                 sessions: sessions
               };
-              const rDataStr = encodeURIComponent(JSON.stringify(rData)).replace(/'/g, "%27");
 
               const waData = {
                 memberId: t.memberId,
                 name: t.memberName,
                 package: t.packageName,
-                price: t.totalAmount,
                 total: t.totalAmount,
                 payment: t.paymentMethod,
                 receipt: t.receiptNumber,
@@ -5676,7 +5725,6 @@ Terima kasih dan selamat berlatih!`;
                 sessions: sessions
               };
 
-              // Using hardcoded link format for JS evaluation safety
               let waUrl = '';
               if (t.phone) {
                 let phoneNum = t.phone.toString().replace(/[^0-9]/g, '');
@@ -5691,6 +5739,8 @@ Terima kasih dan selamat berlatih!`;
                 let waText = generateReceiptText(typeKey, waData);
                 waUrl = 'whatsapp://send?phone=' + phoneNum + '&text=' + encodeURIComponent(waText);
               }
+
+              const rDataStr = encodeURIComponent(JSON.stringify(rData));
 
               return `
                       <tr>
@@ -5728,7 +5778,7 @@ Terima kasih dan selamat berlatih!`;
         .withFailureHandler(function (err) {
           el.innerHTML = '<div style="text-align:center; padding:30px; color:#ef4444">Error: ' + err.message + '</div>';
         })
-        .getRecentTransactionsByType(typeFilter);
+        .getRecentTransactionsByType(typeFilter, s, e);
     }
 
     function loadPOSProducts(force = false) {
@@ -6459,11 +6509,10 @@ Terima kasih dan selamat berlatih!`;
           </div>
         </div>
       `;
-      // Set default dates
-      const today = new Date();
-      document.getElementById('restock_end').value = today.toISOString().split('T')[0];
-      const monthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-      document.getElementById('restock_start').value = monthAgo.toISOString().split('T')[0];
+      // Set default dates to current month range
+      const range = getCurrentMonthRange();
+      document.getElementById('restock_start').value = range.start;
+      document.getElementById('restock_end').value = range.end;
 
       loadRestockHistory();
     }
@@ -6551,8 +6600,9 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function loadRestockHistory() {
-      const start = document.getElementById('restock_start')?.value || '';
-      const end = document.getElementById('restock_end')?.value || '';
+      const range = getCurrentMonthRange();
+      const start = document.getElementById('restock_start')?.value || range.start;
+      const end = document.getElementById('restock_end')?.value || range.end;
       const prodQuery = document.getElementById('restock_product_filter')?.value || '';
       const el = document.getElementById('restockHistoryTable');
       if (!el) return;
@@ -7393,11 +7443,14 @@ Terima kasih dan selamat berlatih!`;
               </div>
             </div>
             <div id="todayCheckinWidget" style="margin-top:24px">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                <h4 style="font-weight:600;color:#334155"><i class="fas fa-list-check"></i> Check-In Hari Ini</h4>
-                <button class="btn btn-sm btn-outline" onclick="loadTodayCheckins()">
-                  <i class="fas fa-sync-alt"></i> Refresh
-                </button>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                <h4 style="font-weight:600;color:#334155;margin:0"><i class="fas fa-list-check"></i> Riwayat Check-In</h4>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input type="date" id="ci_start_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px">
+                  <span style="font-size:12px">s/d</span>
+                  <input type="date" id="ci_end_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px">
+                  <button class="btn btn-sm btn-primary" onclick="loadTodayCheckins()" style="padding:4px 10px;height:32px" title="Filter Data"><i class="fas fa-filter"></i></button>
+                </div>
               </div>
               <div id="todayCheckinsTable">
                 <div style="text-align:center;padding:20px;color:#94a3b8">
@@ -7410,11 +7463,16 @@ Terima kasih dan selamat berlatih!`;
         </div>
 
         <div class="form-card" style="margin-top:20px">
-          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
+          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
             <h4 style="margin:0"><i class="fas fa-clock"></i> Transaksi Visit Terakhir</h4>
-            <button class="btn btn-sm btn-outline" onclick="loadRecentPanelTransactions('Visit', 'visitRecentTransactions')">
-              <i class="fas fa-sync-alt"></i>
-            </button>
+            <div style="display:flex; align-items:center; gap:6px">
+              <input type="date" id="visit_start_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+              <span style="font-size:12px">s/d</span>
+              <input type="date" id="visit_end_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+              <button class="btn btn-sm btn-primary" onclick="loadRecentPanelTransactions('Visit', 'visitRecentTransactions')" style="padding:4px 10px; height:32px" title="Filter Data">
+                <i class="fas fa-filter"></i>
+              </button>
+            </div>
           </div>
           <div class="form-card-body" id="visitRecentTransactions" style="padding:0">
           </div>
@@ -7424,7 +7482,21 @@ Terima kasih dan selamat berlatih!`;
       loadRecentPanelTransactions('Visit', 'visitRecentTransactions');
     }
 
-    function loadTodayCheckins() {
+    function loadTodayCheckins(startDateStr, endDateStr) {
+      const range = getCurrentMonthRange();
+      const sEl = document.getElementById('ci_start_date');
+      const eEl = document.getElementById('ci_end_date');
+      if (sEl && !sEl.value) sEl.value = range.start;
+      if (eEl && !eEl.value) eEl.value = range.end;
+
+      const s = startDateStr || sEl?.value || range.start;
+      const e = endDateStr || eEl?.value || range.end;
+
+      const container = document.getElementById('todayCheckinsTable');
+      if (container) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin"></i> Memuat...</div>';
+      }
+
       google.script.run
         .withSuccessHandler(function (res) {
           const el = document.getElementById('todayCheckinsTable');
@@ -7545,7 +7617,7 @@ Terima kasih dan selamat berlatih!`;
             el.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center">Gagal memuat data: ' + err.message + '</p>';
           }
         })
-        .getTodayCheckins();
+        .getTodayCheckins(s, e);
     }
 
     function previewMemberCheckin(scannedId) {
@@ -8239,11 +8311,16 @@ Terima kasih dan selamat berlatih!`;
         </div>
 
         <div class="form-card" style="margin-top:20px">
-          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center">
+          <div class="form-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
             <h4 style="margin:0"><i class="fas fa-clock"></i> Transaksi Terakhir</h4>
-            <button class="btn btn-sm btn-outline" onclick="loadRecentPanelTransactions('PT', 'ptRecentTransactions')">
-              <i class="fas fa-sync-alt"></i>
-            </button>
+            <div style="display:flex; align-items:center; gap:6px">
+              <input type="date" id="pt_start_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+              <span style="font-size:12px">s/d</span>
+              <input type="date" id="pt_end_date" class="form-input" style="padding:4px 8px; font-size:12px; width:auto; height:32px">
+              <button class="btn btn-sm btn-primary" onclick="loadRecentPanelTransactions('PT', 'ptRecentTransactions')" style="padding:4px 10px; height:32px" title="Filter Data">
+                <i class="fas fa-filter"></i>
+              </button>
+            </div>
           </div>
           <div class="form-card-body" id="ptRecentTransactions" style="padding:0">
           </div>
@@ -9267,7 +9344,11 @@ Terima kasih dan selamat berlatih!`;
         .sendTestEmail(email);
     }
 
-    function loadMemberList() {
+    function loadMemberList(startDateStr, endDateStr) {
+      const range = getCurrentMonthRange();
+      const s = startDateStr || document.getElementById('mem_start_date')?.value || range.start;
+      const e = endDateStr || document.getElementById('mem_end_date')?.value || range.end;
+
       document.getElementById('adminDataView').innerHTML = `
         <div style="text-align:center;padding:20px;color:#94a3b8">
           <i class="fas fa-spinner fa-spin"></i> Memuat...
@@ -9280,7 +9361,6 @@ Terima kasih dan selamat berlatih!`;
           if (!el) return;
           let list = (res && res.success) ? res.members : [];
 
-          // MERGE PENDING REGISTRATIONS (OPTIMISTIC)
           const queue = SyncQueue.get();
           const pending = queue.filter(q => q.action === 'registerMember');
 
@@ -9296,18 +9376,47 @@ Terima kasih dan selamat berlatih!`;
             });
           });
 
+          if (s && e) {
+            const fStart = new Date(s); fStart.setHours(0,0,0,0);
+            const fEnd = new Date(e); fEnd.setHours(23,59,59,999);
+            list = list.filter(m => {
+              if (!m.joinDate && !m.createdAt && !m.expiryDate) return true;
+              const dt = new Date(m.joinDate || m.createdAt || m.expiryDate);
+              return !isNaN(dt.getTime()) ? (dt >= fStart && dt <= fEnd) : true;
+            });
+          }
+
           if (!list || !list.length) {
-            el.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center">Tidak ada data member</p>';
+            el.innerHTML = `
+              <div class="table-container">
+                <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                  <h4 style="font-weight:600;margin:0">Daftar Member (0)</h4>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="date" id="mem_start_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${s}">
+                    <span style="font-size:12px">s/d</span>
+                    <input type="date" id="mem_end_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${e}">
+                    <button class="btn btn-sm btn-primary" onclick="loadMemberList(document.getElementById('mem_start_date').value, document.getElementById('mem_end_date').value)" style="padding:4px 10px;height:32px" title="Filter Data"><i class="fas fa-filter"></i></button>
+                  </div>
+                </div>
+                <p class="text-muted" style="padding:40px;text-align:center">Tidak ada data member untuk periode ini</p>
+              </div>
+            `;
             return;
           }
 
           el.innerHTML = `
             <div class="table-container">
-              <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0">
-                <h4 style="font-weight:600">Daftar Member (${list.length})</h4>
+              <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <h4 style="font-weight:600;margin:0">Daftar Member (${list.length})</h4>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input type="date" id="mem_start_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${s}">
+                  <span style="font-size:12px">s/d</span>
+                  <input type="date" id="mem_end_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${e}">
+                  <button class="btn btn-sm btn-primary" onclick="loadMemberList(document.getElementById('mem_start_date').value, document.getElementById('mem_end_date').value)" style="padding:4px 10px;height:32px" title="Filter Data"><i class="fas fa-filter"></i></button>
+                </div>
               </div>
-              <div style="overflow-x:auto">
-                <table class="data-table">
+              <div style="overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch">
+                <table class="data-table" style="width:100%;min-width:max-content;white-space:nowrap">
                   <thead>
                     <tr>
                       <th>ID Member</th>
@@ -9346,7 +9455,11 @@ Terima kasih dan selamat berlatih!`;
         .getAllMembers();
     }
 
-    function loadTransactionList() {
+    function loadTransactionList(startDateStr, endDateStr) {
+      const range = getCurrentMonthRange();
+      const s = startDateStr || document.getElementById('trx_start_date')?.value || range.start;
+      const e = endDateStr || document.getElementById('trx_end_date')?.value || range.end;
+
       document.getElementById('adminDataView').innerHTML = `
         <div style="text-align:center;padding:20px;color:#94a3b8">
           <i class="fas fa-spinner fa-spin"></i> Memuat...
@@ -9361,7 +9474,6 @@ Terima kasih dan selamat berlatih!`;
           if (!el) return;
           let list = (res && res.success) ? res.transactions : [];
 
-          // MERGE PENDING TRANSACTIONS (OPTIMISTIC)
           const queue = SyncQueue.get();
           const pending = queue.filter(q => q.action === 'processTransaction');
           const allMembers = LocalCache.get('all_members') || [];
@@ -9379,18 +9491,46 @@ Terima kasih dan selamat berlatih!`;
             });
           });
 
+          if (s && e) {
+            const fStart = new Date(s); fStart.setHours(0,0,0,0);
+            const fEnd = new Date(e); fEnd.setHours(23,59,59,999);
+            list = list.filter(t => {
+              const dt = new Date(t.rawDate || t.transactionDate);
+              return !isNaN(dt.getTime()) ? (dt >= fStart && dt <= fEnd) : true;
+            });
+          }
+
           if (!list || !list.length) {
-            el.innerHTML = '<p class="text-muted" style="padding:20px;text-align:center">Tidak ada data transaksi</p>';
+            el.innerHTML = `
+              <div class="table-container">
+                <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                  <h4 style="font-weight:600;margin:0">Riwayat Transaksi (0)</h4>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <input type="date" id="trx_start_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${s}">
+                    <span style="font-size:12px">s/d</span>
+                    <input type="date" id="trx_end_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${e}">
+                    <button class="btn btn-sm btn-primary" onclick="loadTransactionList(document.getElementById('trx_start_date').value, document.getElementById('trx_end_date').value)" style="padding:4px 10px;height:32px" title="Filter Data"><i class="fas fa-filter"></i></button>
+                  </div>
+                </div>
+                <p class="text-muted" style="padding:40px;text-align:center">Tidak ada data transaksi untuk periode ini</p>
+              </div>
+            `;
             return;
           }
 
           el.innerHTML = `
             <div class="table-container">
-              <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0">
-                <h4 style="font-weight:600">Riwayat Transaksi (${list.length})</h4>
+              <div style="padding:16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                <h4 style="font-weight:600;margin:0">Riwayat Transaksi (${list.length})</h4>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <input type="date" id="trx_start_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${s}">
+                  <span style="font-size:12px">s/d</span>
+                  <input type="date" id="trx_end_date" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;height:32px" value="${e}">
+                  <button class="btn btn-sm btn-primary" onclick="loadTransactionList(document.getElementById('trx_start_date').value, document.getElementById('trx_end_date').value)" style="padding:4px 10px;height:32px" title="Filter Data"><i class="fas fa-filter"></i></button>
+                </div>
               </div>
-              <div style="overflow-x:auto">
-                <table class="data-table">
+              <div style="overflow-x:auto;width:100%;-webkit-overflow-scrolling:touch">
+                <table class="data-table" style="width:100%;min-width:max-content;white-space:nowrap">
                   <thead>
                     <tr>
                       <th>No. Kwitansi</th>
@@ -9784,8 +9924,15 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function refreshExpenses() {
-      const start = document.getElementById('exp_start_date')?.value || '';
-      const end = document.getElementById('exp_end_date')?.value || '';
+      const range = getCurrentMonthRange();
+      const sEl = document.getElementById('exp_start_date');
+      const eEl = document.getElementById('exp_end_date');
+      
+      if (sEl && !sEl.value) sEl.value = range.start;
+      if (eEl && !eEl.value) eEl.value = range.end;
+
+      const start = sEl?.value || range.start;
+      const end = eEl?.value || range.end;
 
       document.getElementById('expensesTableContainer').innerHTML = `
         <div style="text-align:center; padding:40px; color:#94a3b8">
@@ -9827,8 +9974,9 @@ Terima kasih dan selamat berlatih!`;
     }
 
     function resetExpensesFilter() {
-      if (document.getElementById('exp_start_date')) document.getElementById('exp_start_date').value = '';
-      if (document.getElementById('exp_end_date')) document.getElementById('exp_end_date').value = '';
+      const range = getCurrentMonthRange();
+      if (document.getElementById('exp_start_date')) document.getElementById('exp_start_date').value = range.start;
+      if (document.getElementById('exp_end_date')) document.getElementById('exp_end_date').value = range.end;
       refreshExpenses();
     }
 
@@ -10050,8 +10198,9 @@ Terima kasih dan selamat berlatih!`;
       container.innerHTML = '<div style="text-align:center;padding:40px"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Memuat data...</div>';
       modal.style.display = 'flex';
 
-      const startDate = document.getElementById('dash_start_date')?.value || '';
-      const endDate = document.getElementById('dash_end_date')?.value || '';
+      const range = getCurrentMonthRange();
+      const startDate = document.getElementById('dash_start_date')?.value || range.start;
+      const endDate = document.getElementById('dash_end_date')?.value || range.end;
 
       if (type === 'deleted_transactions') {
         google.script.run
@@ -10128,18 +10277,18 @@ Terima kasih dan selamat berlatih!`;
                 });
 
                 let html = `
-                  <div style="overflow-x:auto; width:100%">
-                    <table class="data-table" style="width:100%; border-collapse:collapse; font-size:14px">
+                  <div style="overflow-x:auto; width:100%; -webkit-overflow-scrolling:touch">
+                    <table class="data-table" style="width:100%; min-width:max-content; border-collapse:collapse; font-size:14px; white-space:nowrap">
                       <thead>
                         <tr style="background:var(--bg-light); border-bottom:2px solid var(--border-color)">
-                          <th style="text-align:left; padding:12px 14px; font-weight:700; color:var(--text-main)">${nameHeader}</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Qty</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Transfer Bank</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Qris</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Debit</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--text-main)">Cash</th>
-                          <th style="text-align:right; padding:12px 14px; font-weight:700; color:var(--primary)">Total</th>
-                          ${showNetProfit ? '<th style="text-align:right; padding:12px 14px; font-weight:700; color:#22c55e">Net Profit</th>' : ''}
+                          <th style="text-align:left; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">${nameHeader}</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">Qty</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">Transfer Bank</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">Qris</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">Debit</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--text-main); white-space:nowrap">Cash</th>
+                          <th style="text-align:right; padding:12px 16px; font-weight:700; color:var(--primary); white-space:nowrap">Total</th>
+                          ${showNetProfit ? '<th style="text-align:right; padding:12px 16px; font-weight:700; color:#22c55e; white-space:nowrap">Net Profit</th>' : ''}
                         </tr>
                       </thead>
                       <tbody>
@@ -10147,28 +10296,28 @@ Terima kasih dan selamat berlatih!`;
                           const itemTotal = Number(item.total !== undefined ? item.total : item.omset) || 0;
                           return `
                           <tr style="border-bottom:1px solid var(--border-color)">
-                            <td style="text-align:left; padding:12px 14px; font-weight:600">${escapeHtml(item.name)}</td>
-                            <td style="text-align:right; padding:12px 14px">${Number(item.qty) || 0}</td>
-                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.transfer || 0)}</td>
-                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.qris || 0)}</td>
-                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.debit || 0)}</td>
-                            <td style="text-align:right; padding:12px 14px">${formatCurrency(item.cash || 0)}</td>
-                            <td style="text-align:right; padding:12px 14px; font-weight:700; color:var(--primary)">${formatCurrency(itemTotal)}</td>
-                            ${showNetProfit ? `<td style="text-align:right; padding:12px 14px; font-weight:700; color:#22c55e">${formatCurrency(item.netProfit || 0)}</td>` : ''}
+                            <td style="text-align:left; padding:12px 16px; font-weight:600; white-space:nowrap">${escapeHtml(item.name)}</td>
+                            <td style="text-align:right; padding:12px 16px; white-space:nowrap">${Number(item.qty) || 0}</td>
+                            <td style="text-align:right; padding:12px 16px; white-space:nowrap">${formatCurrency(item.transfer || 0)}</td>
+                            <td style="text-align:right; padding:12px 16px; white-space:nowrap">${formatCurrency(item.qris || 0)}</td>
+                            <td style="text-align:right; padding:12px 16px; white-space:nowrap">${formatCurrency(item.debit || 0)}</td>
+                            <td style="text-align:right; padding:12px 16px; white-space:nowrap">${formatCurrency(item.cash || 0)}</td>
+                            <td style="text-align:right; padding:12px 16px; font-weight:700; color:var(--primary); white-space:nowrap">${formatCurrency(itemTotal)}</td>
+                            ${showNetProfit ? `<td style="text-align:right; padding:12px 16px; font-weight:700; color:#22c55e; white-space:nowrap">${formatCurrency(item.netProfit || 0)}</td>` : ''}
                           </tr>
                           `;
                         }).join('')}
                       </tbody>
                       <tfoot>
                         <tr style="font-weight:700; background:var(--bg-light); border-top:2px solid var(--border-color); border-bottom:2px solid var(--border-color)">
-                          <td style="text-align:left; padding:14px; font-size:14px; font-weight:800">TOTAL</td>
-                          <td style="text-align:right; padding:14px; font-size:14px">${totalQty}</td>
-                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalTransfer)}</td>
-                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalQris)}</td>
-                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalDebit)}</td>
-                          <td style="text-align:right; padding:14px; font-size:14px">${formatCurrency(totalCash)}</td>
-                          <td style="text-align:right; padding:14px; font-size:14px; color:var(--primary); font-weight:800">${formatCurrency(grandTotal)}</td>
-                          ${showNetProfit ? `<td style="text-align:right; padding:14px; font-size:14px; color:#22c55e; font-weight:800">${formatCurrency(totalNetProfit)}</td>` : ''}
+                          <td style="text-align:left; padding:14px 16px; font-size:14px; font-weight:800; white-space:nowrap">TOTAL</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; white-space:nowrap">${totalQty}</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; white-space:nowrap">${formatCurrency(totalTransfer)}</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; white-space:nowrap">${formatCurrency(totalQris)}</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; white-space:nowrap">${formatCurrency(totalDebit)}</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; white-space:nowrap">${formatCurrency(totalCash)}</td>
+                          <td style="text-align:right; padding:14px 16px; font-size:14px; color:var(--primary); font-weight:800; white-space:nowrap">${formatCurrency(grandTotal)}</td>
+                          ${showNetProfit ? `<td style="text-align:right; padding:14px 16px; font-size:14px; color:#22c55e; font-weight:800; white-space:nowrap">${formatCurrency(totalNetProfit)}</td>` : ''}
                         </tr>
                       </tfoot>
                     </table>
@@ -10177,17 +10326,17 @@ Terima kasih dan selamat berlatih!`;
                 container.innerHTML = html;
               } else {
                 let html = `
-                  <div class="table-responsive" style="overflow-x:auto; width:100%">
-                    <table class="table data-table" style="width:100%">
+                  <div class="table-responsive" style="overflow-x:auto; width:100%; -webkit-overflow-scrolling:touch">
+                    <table class="table data-table" style="width:100%; min-width:max-content; white-space:nowrap">
                       <thead>
                         <tr>
-                          ${res.headers.map(h => `<th>${h}</th>`).join('')}
+                          ${res.headers.map(h => `<th style="white-space:nowrap">${h}</th>`).join('')}
                         </tr>
                       </thead>
                       <tbody>
                         ${res.data.map(row => `
                           <tr>
-                            ${row.map(cell => `<td>${cell}</td>`).join('')}
+                            ${row.map(cell => `<td style="white-space:nowrap">${cell}</td>`).join('')}
                           </tr>
                         `).join('')}
                       </tbody>
@@ -10696,6 +10845,110 @@ Terima kasih dan selamat berlatih!`;
         },
         options: { responsive: true, maintainAspectRatio: false }
       });
+    }
+
+    // ================ EXPORT EXCEL RECAP ================
+    function downloadTransactionRecapExcel() {
+      const range = getCurrentMonthRange();
+      const s = document.getElementById('dash_start_date')?.value || range.start;
+      const e = document.getElementById('dash_end_date')?.value || range.end;
+
+      showLoading();
+      showToast('Menyiapkan file rekapitulasi Excel...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          hideLoading();
+          if (!res || !res.success) {
+            showToast('Gagal mengambil data rekap: ' + (res?.message || 'Error'), 'error');
+            return;
+          }
+
+          const sum = res.summary || {};
+          const transactions = res.transactions || [];
+          const expenses = res.expenses || [];
+
+          const safeStr = (val) => String(val === null || val === undefined ? '' : val).replace(/"/g, '""');
+
+          // Format CSV Content with UTF-8 BOM for Microsoft Excel compatibility
+          let csv = '\uFEFF';
+
+          // SECTION 1: HEADER & SUMMARY RECAP
+          csv += `="REKAPITULASI LAPORAN KEUANGAN & TRANSAKSI UGYM"\n`;
+          csv += `="Periode Filter:",="${s} s/d ${e}"\n`;
+          csv += `="Tanggal Download:",="${new Date().toLocaleString('id-ID')}"\n\n`;
+
+          csv += `="RINGKASAN KEUANGAN KOMBINASI"\n`;
+          csv += `="Total Omset Fitness",="Rp ${sum.fitnessRevenue || 0}"\n`;
+          csv += `="Total Omset Retail / POS",="Rp ${sum.posRevenue || 0}"\n`;
+          csv += `="Total Pendapatan Kotor (Gross Revenue)",="Rp ${sum.totalRevenue || 0}"\n`;
+          csv += `="Total Pengeluaran Operasional (Expenses)",="Rp ${sum.totalExpenses || 0}"\n`;
+          csv += `="Total Laba Bersih (Net Profit)",="Rp ${sum.netProfitCombined || 0}"\n\n`;
+
+          csv += `="BREAKDOWN METODE PEMBAYARAN PENDAPATAN"\n`;
+          csv += `="Transfer Bank",="Rp ${sum.transferTotal || 0}"\n`;
+          csv += `="QRIS",="Rp ${sum.qrisTotal || 0}"\n`;
+          csv += `="Debit Card",="Rp ${sum.debitTotal || 0}"\n`;
+          csv += `="Cash / Tunai",="Rp ${sum.cashTotal || 0}"\n\n`;
+
+          // SECTION 2: DETAIL TRANSAKSI PENDAPATAN
+          csv += `="RINCIAN DETAIL TRANSAKSI PENDAPATAN (${transactions.length} Data)"\n`;
+          csv += `"No. Resi / ID","Tanggal & Waktu","Tipe Transaksi","Nama Member / Customer","ID Member","Detail Paket / Produk","Qty","Total Amount (Rp)","Metode Pembayaran","Net Profit (Rp)","Kasir / Trainer","Catatan"\n`;
+
+          transactions.forEach(t => {
+            const receipt = `"${safeStr(t.receiptNumber)}"`;
+            const date = `"${safeStr(t.date)}"`;
+            const type = `"${safeStr(t.type)}"`;
+            const cust = `"${safeStr(t.customer)}"`;
+            const mid = `"${safeStr(t.memberId)}"`;
+            const detail = `"${safeStr(t.detail)}"`;
+            const qty = typeof t.qty === 'number' ? t.qty : (Number(t.qty) || 1);
+            const amt = typeof t.total === 'number' ? t.total : (Number(t.total) || 0);
+            const pm = `"${safeStr(t.paymentMethod)}"`;
+            const net = typeof t.netProfit === 'number' ? t.netProfit : safeStr(t.netProfit || '-');
+            const staff = `"${safeStr(t.staff)}"`;
+            const notes = `"${safeStr(t.notes)}"`;
+
+            csv += `${receipt},${date},${type},${cust},${mid},${detail},${qty},${amt},${pm},${net},${staff},${notes}\n`;
+          });
+
+          csv += `\n`;
+
+          // SECTION 3: DETAIL DATA PENGELUARAN (EXPENSES)
+          csv += `="RINCIAN DETAIL PENGELUARAN OPERASIONAL (${expenses.length} Data)"\n`;
+          csv += `"ID Pengeluaran","Tanggal & Waktu","Kategori","Deskripsi / Keterangan","Jumlah Nominal (Rp)","Metode Pembayaran","Dicatat Oleh"\n`;
+
+          expenses.forEach(x => {
+            const xid = `"${safeStr(x.id)}"`;
+            const xdate = `"${safeStr(x.date)}"`;
+            const xcat = `"${safeStr(x.category)}"`;
+            const xdesc = `"${safeStr(x.description)}"`;
+            const xamt = typeof x.amount === 'number' ? x.amount : (Number(x.amount) || 0);
+            const xpm = `"${safeStr(x.paymentMethod)}"`;
+            const xusr = `"${safeStr(x.user)}"`;
+
+            csv += `${xid},${xdate},${xcat},${xdesc},${xamt},${xpm},${xusr}\n`;
+          });
+
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const fileName = `Rekap_Keuangan_UGYM_${s}_sd_${e}.csv`;
+          
+          link.setAttribute('href', url);
+          link.setAttribute('download', fileName);
+          link.style.visibility = 'hidden';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
+          showToast('File Excel Rekapitulasi berhasil diunduh', 'success');
+        })
+        .withFailureHandler(function (err) {
+          hideLoading();
+          showToast('Error download: ' + err.message, 'error');
+        })
+        .getExportTransactionData(s, e);
     }
 
     // ================ DAILY REPORT MODAL ================
