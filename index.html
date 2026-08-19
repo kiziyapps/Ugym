@@ -5825,6 +5825,10 @@ Terima kasih dan selamat berlatih!`;
             showToast('Gagal memuat produk: ' + (res.message || 'Error tidak diketahui'), 'error');
           }
         })
+        .withFailureHandler(function (err) {
+          console.error('POS Products Error:', err);
+          showToast('Koneksi ke server gagal saat memuat produk POS: ' + err.message, 'error');
+        })
         .getProducts();
     }
 
